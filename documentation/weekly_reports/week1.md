@@ -1,11 +1,13 @@
 1. What have I done this week?
 
 - Did some preliminary work exploring what topics could be interesting based on the examples given,
-  landed on Wave Function Collapse
-- Attended the starting lecture on Wednesday, confirmed the viability of the topic with the teacher
-- Searched for research on the topic
-- Wrote the initial requirements specification
-- Wrote this report
+  landed on Wave Function Collapse: ~30min
+- Attended the starting lecture on Wednesday, confirmed the viability of the topic with the teacher: 1h45min
+- Searched for research on the topic: ~2h
+- Wrote the initial requirements specification: ~3h
+- Wrote this report: ~30min
+
+Time used: 7h45min
 
 2. How has the program progressed?
 
