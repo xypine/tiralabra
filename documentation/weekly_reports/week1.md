@@ -6,8 +6,9 @@
 - Searched for research on the topic: ~2h
 - Wrote the initial requirements specification: ~3h
 - Wrote this report: ~30min
+- Initialized the Rust project: ~5min
 
-Time used: 7h45min
+Time used: ~8h
 
 2. How has the program progressed?
 
@@ -35,6 +36,5 @@ Time used: 7h45min
 
 4. What'll I do next?
 
-- init rust project
 - write initial unit tests
 - write some initial data types and methods for tiles / grid

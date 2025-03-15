@@ -6,6 +6,8 @@ I plan to implement the project in Rust, as I like writing it, it has predictabl
 
 Languages I know enough to be able to peer review include Typescript / Javascript, Python, Go, Java and maybe C/C++.
 
+My current study programme is tietojenkäsittelytieteen kandidaatti (TKT).
+
 All documentation will be written in English.
 
 ## The Core Algorithm
