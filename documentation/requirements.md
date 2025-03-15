@@ -19,11 +19,11 @@ Gumin's implementation step by step (given an input image of size W x H, tile si
 - Split the input image to overlapping tiles of size N x N
 - Generate rotated and mirrored versions of the tiles
 - Deduplicate generated tiles
-  $T = \text{number of tiles generated}$
+  $$T = \text{number of tiles generated}$$
 
-2. Adjacency rule extraction $\text{maybe} O(HW \cdot HW \cdot N^2)$: Check which tiles are next to eachother in the original image
+2. Adjacency rule extraction $\text{maybe } O(HW \cdot HW \cdot N^2)$: Check which tiles are next to eachother in the original image
 3. Initialize output $O(I \cdot J \cdot T)$: Any cell could be any tile
-4. Find the cell with the lowest entropy $O(I \cdot J) \text{or maybe} O(log (I \cdot J) \text{using a priority queue})$
+4. Find the cell with the lowest entropy $O(I \cdot J) \text{ or maybe } O(log (I \cdot J)) \text{ using a priority queue}$
 
 - if all cells have been collapsed, the algorithm is complete
 - if the cell has no possible states, restart the algorithm with a different random seed
