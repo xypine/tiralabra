@@ -14,14 +14,14 @@ This project will mainly aim to implement the "Wave Function Collapse" algorithm
 
 Gumin's implementation step by step (given an input image of size W x H, tile size N, output size I x J):
 
-1. Tile extraction $O(HW)$
+1. Tile extraction $O(H \cdot W \cdot N^2)$
 
-- Split the input image to overlapping tiles of size N x N
-- Generate rotated and mirrored versions of the tiles
-- Deduplicate generated tiles
-  $$T = \text{number of tiles generated}$$
+- Split the input image to overlapping tiles of size N x N $O(H \cdot W \cdot N^2)$
+- Generate rotated and mirrored versions of the tiles $O(8 \cdot H \cdot W \cdot N^2) = O(H \cdot W \cdot N^2)$
+- Deduplicate generated tiles $O(H \cdot W \cdot N^2) \text { assuming constant-time hashing}$
+  $$T = \text{number of unique tiles generated}$$
 
-2. Adjacency rule extraction $\text{maybe } O(HW \cdot HW \cdot N^2)$: Check which tiles are next to eachother in the original image
+2. Adjacency rule extraction $\text{maybe } O(H \cdot W)$: Check which tiles are next to eachother in the original image
 3. Initialize output $O(I \cdot J \cdot T)$: Any cell could be any tile
 4. Find the cell with the lowest entropy $O(I \cdot J) \text{ or maybe } O(log (I \cdot J)) \text{ using a priority queue}$
 
@@ -36,7 +36,7 @@ Gumin's implementation step by step (given an input image of size W x H, tile si
 
 7. Go to step 4
 
-The time complexity of the whole algorithm depends heavily on how complex the rules of the tiles are. Intricated rules will probably result in fewer propagations, but increase the likelihood that the algorithm fails (especially with large output sizes). The worst case time complexity is probably exponential if the algorithm is allowed to fail or return an invalid solution.
+The time complexity of the whole algorithm depends heavily on how complex the rules of the tiles are. Intricated rules and large output sizes increase the likelihood that the algorithm fails. The worst case time complexity is probably exponential if the algorithm is allowed to fail or return an invalid solution.
 
 If the algorithm were not allowed to fail, time complexity would be infinite as it's possible to craft inputs that are impossible to solve with some output sizes [[2](#2)]. As such, it would by definition not be a valid algorithm, so this project will focus on the bounded variant which may fail. In Gumin's implementation, each sample dataset contains information on the maximum attempts to try.
 
