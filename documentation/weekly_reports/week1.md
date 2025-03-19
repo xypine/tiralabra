@@ -18,12 +18,12 @@ Time used: ~8h
 
 - Wave function collapse is actually a variant of Paul Merrell's "model synthesis" algorithm (published way back in 2007), with some minor modifications:
 
-- Complete Backtracking has been proven to be a NP-complete problem
+  1. During the tile extraction step, Gumin uses a sliding window resulting in overlapping tiles. This makes it possible to generate useful constraints from a single input image.
+  2. Gumin uses an entropy calculation when selecting which cell to collapse, while Merrell used a simple scanline approach (collapsing tiles in order). According to Gumin, this removes directional bias present in Model Synthesis.
 
   - Existing implementations of the WFC algorithm seem to run into conflicts quite rarely, especially on low output sizes. Backtracking may still be better than starting again from scratch, as long as we don't get stuck.
 
-  1. During the tile extraction step, Gumin uses a sliding window resulting in overlapping tiles. This makes it possible to generate useful constraints from a single input image.
-  2. Gumin uses an entropy calculation when selecting which cell to collapse, while Merrell used a simple scanline approach (collapsing tiles in order). According to Gumin, this removes directional bias present in Model Synthesis.
+- Complete Backtracking has been proven to be a NP-complete problem
 
 - Because of its high worst-case time complexity, Wave Function Collapse is best suited for generating somewhat small, finite patterns.
   With an infinite output size, the algorithm will at some point end up in an incorrect state, and then have to start all over again. Propagation also causes problems for large output sizes - even if the neighbouring rules are simple, in practice propagation will have to stop at some point. The algorithm is still useful, especially because it allows additional constraints set by the user or some other algorithm.
