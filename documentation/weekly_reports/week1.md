@@ -30,11 +30,11 @@ Time used: ~8h
   - There have been attempts to get WFC to reliably work on infinite / large output sizes:
     https://arxiv.org/pdf/2308.07307 "Extend Wave Function Collapse Algorithm to Large-Scale Content Generation"
 
-3. What was left unclear or caused difficulty?
+4. What was left unclear or caused difficulty?
 
 - Backtracking methods to try
 
-4. What'll I do next?
+5. What'll I do next?
 
 - write initial unit tests
 - write some initial data types and methods for tiles / grid
