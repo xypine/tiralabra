@@ -51,7 +51,7 @@ impl Add<Delta2D> for Delta2D {
     }
 }
 
-#[derive(Debug, Clone, Copy, strum_macros::EnumIter)]
+#[derive(Debug, Clone, Copy)]
 pub enum Direction2D {
     UP = 0,
     RIGHT = 1,
