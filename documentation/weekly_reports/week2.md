@@ -1,6 +1,7 @@
 1. What have I done this week?
 
 - wrote some initial tests and implementations for tiles and grids: ~4h
+- created a github actions pipeline: 10min
 
 2. How has the program progressed?
 
