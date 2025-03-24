@@ -1,34 +1,101 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use crate::{
-    interface::GridInterface,
+    entropy::EntropyHeapEntry,
+    interface::{GridInterface, TileInterface},
     space::{Delta2D, Direction2D, Location2D},
     tile::{Tile, TileState},
 };
 
-pub struct ConstantSizeGrid<const W: usize, const H: usize> {
+pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
     tiles: [[Tile; H]; W],
+    // Priority queue based on tile entropy
+    entropy_heap: BinaryHeap<EntropyHeapEntry>,
+    // Used to invalidate entries in the entropy_heap
+    tile_invalidation_matrix: [[usize; H]; W],
+}
+impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
+    pub fn tiles(&self) -> &[[Tile; H]; W] {
+        &self.tiles
+    }
+
+    // copies the data for the caller
+    pub fn get_tiles(&self) -> [[Tile; H]; W] {
+        self.tiles.clone()
+    }
+
+    fn update_tile(&mut self, location: Location2D, state: Tile) -> Option<()> {
+        let current_state = self.get_tile(location)?;
+
+        if state == current_state {
+            // no update needed
+            return Some(());
+        }
+
+        self.tiles[location.x][location.y] = state;
+        self.update_tile_entropy(location);
+
+        Some(())
+    }
+
+    pub fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
+        if let Some(candidate) = self.entropy_heap.peek() {
+            let current_version =
+                self.tile_invalidation_matrix[candidate.location.x][candidate.location.y];
+            if candidate.version < current_version {
+                //println!(
+                //    "candidate {:?} was outdated (latest {current_version})",
+                //    candidate
+                //);
+                let _ = self.entropy_heap.pop();
+                return self.get_lowest_entropy_position();
+            }
+            //println!("PICKED {:?}", candidate);
+            return Some(candidate.location);
+        }
+        None
+    }
+
+    #[inline]
+    fn update_tile_entropy(&mut self, location: Location2D) {
+        let current_version = self.tile_invalidation_matrix[location.x][location.y];
+        let new_entropy = self.tiles[location.x][location.y].calculate_entropy();
+        let new_version = current_version + 1;
+        //println!("UPD {location:?}v{new_version} = {new_entropy:?}");
+        self.tile_invalidation_matrix[location.x][location.y] = new_version;
+        self.entropy_heap.push(EntropyHeapEntry {
+            location,
+            entropy: new_entropy,
+            version: new_version,
+        });
+    }
 }
 
-impl<const W: usize, const H: usize> ConstantSizeGrid<W, H> {
+impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
     pub fn new(possible_tile_states: HashSet<TileState>) -> Self {
         let tiles = std::array::from_fn(|_| {
             std::array::from_fn(|_| Tile::new(possible_tile_states.clone()))
         });
-        Self { tiles }
+        let tile_invalidation_matrix = std::array::from_fn(|_| std::array::from_fn(|_| 0));
+        let mut new = Self {
+            tiles,
+            entropy_heap: BinaryHeap::new(),
+            tile_invalidation_matrix,
+        };
+
+        for x in 0..W {
+            for y in 0..H {
+                new.update_tile_entropy(Location2D { x, y });
+            }
+        }
+
+        new
     }
 }
 
-impl<const W: usize, const H: usize> GridInterface<2, TileState, Location2D, Direction2D, Tile>
-    for ConstantSizeGrid<W, H>
+impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Direction2D, Tile>
+    for ConstantSizeGrid2D<W, H>
 {
-    fn get_tile(&self, location: Location2D) -> Option<Tile> {
-        self.tiles
-            .get(location.x)
-            .and_then(|col| col.get(location.y))
-            .cloned()
-    }
-
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {
         let mut map = HashMap::new();
         for (x, col) in self.tiles.iter().enumerate() {
@@ -40,13 +107,18 @@ impl<const W: usize, const H: usize> GridInterface<2, TileState, Location2D, Dir
         map
     }
 
+    fn get_tile(&self, location: Location2D) -> Option<Tile> {
+        self.tiles
+            .get(location.x)
+            .and_then(|col| col.get(location.y))
+            .cloned()
+    }
+
     fn get_neighbours(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 2 * 2] {
         std::array::from_fn(|index| {
             let direction = Direction2D::try_from(index).unwrap();
             let direction_delta = Delta2D::from(direction);
-            let neighbour = if let Some(neighbour_location) =
-                location.try_apply(direction_delta).ok()
-            {
+            let neighbour = if let Ok(neighbour_location) = location.try_apply(direction_delta) {
                 println!(
                     "{location:?} + {direction:?} ({direction_delta:?}) = {neighbour_location:?}"
                 );
@@ -57,6 +129,13 @@ impl<const W: usize, const H: usize> GridInterface<2, TileState, Location2D, Dir
             (direction, neighbour)
         })
     }
+
+    fn with_tile<R, F: Fn(&mut Tile) -> R>(&mut self, location: Location2D, f: F) -> Option<R> {
+        let mut mutable_copy = self.get_tile(location)?;
+        let result = f(&mut mutable_copy);
+        self.update_tile(location, mutable_copy)?;
+        Some(result)
+    }
 }
 
 #[cfg(test)]
@@ -65,7 +144,7 @@ mod tests {
 
     use super::*;
 
-    fn debug_print<const W: usize, const H: usize>(grid: &ConstantSizeGrid<W, H>) {
+    fn debug_print<const W: usize, const H: usize>(grid: &ConstantSizeGrid2D<W, H>) {
         for y in 0..H {
             for x in 0..W {
                 let tile = grid.get_tile(Location2D { x, y }).unwrap();
@@ -82,8 +161,8 @@ mod tests {
 
     fn init_and_check<const W: usize, const H: usize>(
         possible: HashSet<TileState>,
-    ) -> ConstantSizeGrid<W, H> {
-        let grid: ConstantSizeGrid<W, H> = ConstantSizeGrid::new(possible);
+    ) -> ConstantSizeGrid2D<W, H> {
+        let grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(possible);
         assert_eq!(grid.tiles.len(), W);
         for col in &grid.tiles {
             assert_eq!(col.len(), H);
@@ -92,12 +171,12 @@ mod tests {
         grid
     }
 
-    fn init_id<const W: usize, const H: usize>() -> ConstantSizeGrid<W, H> {
+    fn init_id<const W: usize, const H: usize>() -> ConstantSizeGrid2D<W, H> {
         let mut grid = init_and_check::<W, H>(HashSet::new());
         for x in 0..W {
             for y in 0..H {
                 let unique = id(Location2D { x, y }, W, H);
-                grid.tiles[x][y].force_set(unique);
+                grid.tiles[x][y].set_possible_states(HashSet::from([unique]));
             }
         }
 
