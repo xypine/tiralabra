@@ -9,3 +9,7 @@
 4. What was left unclear or caused difficulty?
 
 5. What'll I do next?
+
+- add some kind of interface
+- mostly complete the base algo implementation (with tests!)
+- document code
