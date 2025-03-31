@@ -1,12 +1,15 @@
 #[cfg(test)]
 mod e2e_tests;
 
+use std::collections::VecDeque;
+
 use crate::{
     grid::ConstantSizeGrid2D,
     interface::{
-        GridInterface, TileInterface, WaveFunctionCollapse, WaveFunctionCollapseInterruption,
+        GridInterface, PropagateQueueEntry, TileInterface, WaveFunctionCollapse,
+        WaveFunctionCollapseInterruption,
     },
-    space::Location2D,
+    space::{Direction2D, Location2D},
 };
 
 impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for ConstantSizeGrid2D<W, H> {
@@ -22,9 +25,63 @@ impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for Consta
             .flatten()
             .ok_or(WaveFunctionCollapseInterruption::Contradiction(position))?;
 
-        // TODO: Propagate
+        let neighbours = self.get_neighbours(position);
+        for (_direction, npos) in neighbours {
+            if let Some(neighbour_position) = npos {
+                self.propagate(VecDeque::from([PropagateQueueEntry {
+                    source: position,
+                    target: neighbour_position,
+                }]))?;
+            }
+        }
 
         Ok(())
+    }
+
+    fn propagate(
+        &mut self,
+        mut queue: VecDeque<crate::interface::PropagateQueueEntry<Location2D>>,
+    ) -> crate::interface::TickResult<Location2D> {
+        match queue.pop_front() {
+            None => Ok(()),
+            Some(queue_entry) => {
+                let delta = queue_entry
+                    .target
+                    .delta(queue_entry.source)
+                    .expect("converting propagate location to delta");
+                let direction =
+                    Direction2D::try_from(delta).expect("converting propagate delta to direction");
+                // println!("{queue_entry:?} {direction:?}");
+                let source = self
+                    .get_tile(queue_entry.source)
+                    .expect("getting propagation source");
+                let rules = self.rules.clone();
+                let was_collapsed = self
+                    .with_tile(queue_entry.target, |target| {
+                        if target.has_collapsed() {
+                            return false;
+                        }
+                        let checked_states = rules.check(target, &source, direction);
+                        target.set_possible_states(checked_states);
+                        target.has_collapsed()
+                    })
+                    .expect("updating tile during propagation");
+                if was_collapsed {
+                    let neighbours = self.get_neighbours(queue_entry.target);
+                    for (_direction, npos) in neighbours {
+                        if let Some(neighbour_position) = npos {
+                            queue.push_back(PropagateQueueEntry {
+                                source: queue_entry.target,
+                                target: neighbour_position,
+                            });
+                        }
+                    }
+                }
+                self.propagate(queue)?;
+
+                Ok(())
+            }
+        }
     }
 
     fn tick(&mut self) -> crate::interface::TickResult<Location2D> {
@@ -40,7 +97,9 @@ impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for Consta
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
+    use std::collections::{BTreeSet, HashSet};
+
+    use crate::rules::RuleSet;
 
     use super::*;
 
@@ -48,7 +107,8 @@ mod tests {
     fn find_lowest_entropy_sanity() {
         const W: usize = 2;
         const H: usize = 2;
-        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(BTreeSet::from([1, 2, 3]));
+        let rules = RuleSet::new(BTreeSet::from([1, 2, 3]), HashSet::from([]));
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
 
         let lowest_entropy_location = Location2D { x: 0, y: 1 };
         assert_eq!(

@@ -1,13 +1,15 @@
-use std::collections::{BTreeSet, BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap};
 
 use crate::{
     entropy::EntropyHeapEntry,
     interface::{GridInterface, TileInterface},
-    space::{Delta2D, Direction2D, Location2D},
+    rules::RuleSet,
+    space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     tile::{Tile, TileState},
 };
 
 pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
+    pub rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
     tiles: [[Tile; H]; W],
     // Priority queue based on tile entropy
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
@@ -50,7 +52,7 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
                 let _ = self.entropy_heap.pop();
                 return self.get_lowest_entropy_position();
             }
-            //println!("PICKED {:?}", candidate);
+            // println!("PICKED {:?}", candidate);
             return Some(candidate.location);
         }
         None
@@ -59,25 +61,28 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
     #[inline]
     fn update_tile_entropy(&mut self, location: Location2D) {
         let current_version = self.entropy_invalidation_matrix[location.x][location.y];
-        let new_entropy = self.tiles[location.x][location.y].calculate_entropy();
         let new_version = current_version + 1;
         //println!("UPD {location:?}v{new_version} = {new_entropy:?}");
         self.entropy_invalidation_matrix[location.x][location.y] = new_version;
-        self.entropy_heap.push(EntropyHeapEntry {
-            location,
-            entropy: new_entropy,
-            version: new_version,
-        });
+        if let Some(new_entropy) = self.tiles[location.x][location.y].calculate_entropy() {
+            self.entropy_heap.push(EntropyHeapEntry {
+                location,
+                entropy: new_entropy,
+                version: new_version,
+            });
+        } else {
+            // no updated version is pushed, so it's impossible for the tile to be picked
+        }
     }
 }
 
 impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
-    pub fn new(possible_tile_states: BTreeSet<TileState>) -> Self {
-        let tiles = std::array::from_fn(|_| {
-            std::array::from_fn(|_| Tile::new(possible_tile_states.clone()))
-        });
+    pub fn new(rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>) -> Self {
+        let tiles =
+            std::array::from_fn(|_| std::array::from_fn(|_| Tile::new(rules.possible.clone())));
         let tile_invalidation_matrix = std::array::from_fn(|_| std::array::from_fn(|_| 0));
         let mut new = Self {
+            rules,
             tiles,
             entropy_heap: BinaryHeap::new(),
             entropy_invalidation_matrix: tile_invalidation_matrix,
@@ -114,19 +119,20 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
             .cloned()
     }
 
-    fn get_neighbours(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 2 * 2] {
+    fn get_neighbours(&self, location: Location2D) -> [(Direction2D, Option<Location2D>); 4] {
         std::array::from_fn(|index| {
             let direction = Direction2D::try_from(index).unwrap();
             let direction_delta = Delta2D::from(direction);
-            let neighbour = if let Ok(neighbour_location) = location.try_apply(direction_delta) {
-                println!(
-                    "{location:?} + {direction:?} ({direction_delta:?}) = {neighbour_location:?}"
-                );
-                self.get_tile(neighbour_location)
+            let location = if let Ok(neighbour_location) = location.try_apply(direction_delta) {
+                if neighbour_location.x >= W || neighbour_location.y >= H {
+                    None
+                } else {
+                    Some(neighbour_location)
+                }
             } else {
                 None
             };
-            (direction, neighbour)
+            (direction, location)
         })
     }
 
@@ -136,11 +142,24 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         self.update_tile(location, mutable_copy)?;
         Some(result)
     }
+
+    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
+        let locations = self.get_neighbours(location);
+        std::array::from_fn(|index| {
+            let (direction, neighbour_location) = locations[index];
+            let neighbour = if let Some(neighbour_location) = neighbour_location {
+                self.get_tile(neighbour_location)
+            } else {
+                None
+            };
+            (direction, neighbour)
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{BTreeSet, HashSet};
 
     use crate::interface::TileInterface;
 
@@ -164,7 +183,9 @@ mod tests {
     fn init_and_check<const W: usize, const H: usize>(
         possible: BTreeSet<TileState>,
     ) -> ConstantSizeGrid2D<W, H> {
-        let grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(possible);
+        let allowed = HashSet::from([]);
+        let rules = RuleSet::new(possible, allowed);
+        let grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
         assert_eq!(grid.tiles.len(), W);
         for col in &grid.tiles {
             assert_eq!(col.len(), H);
@@ -286,7 +307,7 @@ mod tests {
                     }
                 }
 
-                let impl_neighbours = grid.get_neighbours(location);
+                let impl_neighbours = grid.get_neighbour_tiles(location);
                 for (i, (dir, impl_neighbour)) in impl_neighbours.iter().cloned().enumerate() {
                     println!("=== Neighbour {i} ===");
                     println!("impl resolved to direction {dir:?}");

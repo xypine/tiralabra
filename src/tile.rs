@@ -78,10 +78,15 @@ mod tests {
         let tile_3_states = Tile::new(BTreeSet::from([1, 2, 3]));
         assert!(!tile_3_states.has_collapsed());
 
-        // tiles with zero or one state(s) cannot be collapsed
-        assert!(tile_0_states.calculate_entropy() == tile_1_states.calculate_entropy());
+        // tiles with one state cannot be collapsed
+        assert_eq!(tile_1_states.calculate_entropy(), None);
         // otherwise tiles with less states should have a lower entropy
         // (at least with the naive entropy implementation)
-        assert!(tile_2_states.calculate_entropy() < tile_3_states.calculate_entropy());
+        assert!(
+            tile_0_states.calculate_entropy().unwrap() < tile_2_states.calculate_entropy().unwrap()
+        );
+        assert!(
+            tile_2_states.calculate_entropy().unwrap() < tile_3_states.calculate_entropy().unwrap()
+        );
     }
 }

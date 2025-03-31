@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use crate::entropy::Entropy;
 
@@ -13,22 +13,23 @@ pub trait TileInterface<State, TCoords> {
     fn has_collapsed(&self) -> bool {
         self.possible_states().count() == 1
     }
-    fn calculate_entropy(&self) -> Entropy {
+    fn calculate_entropy(&self) -> Option<Entropy> {
+        if self.has_collapsed() {
+            return None;
+        }
         // TODO: Replace with the actual entropy calculation
         let possible = self.possible_states().count();
-        let entropy = if possible < 2 {
-            f64::INFINITY
-        } else {
-            possible as f64
-        };
-        Entropy(entropy)
+        let entropy = possible as f64;
+        Some(Entropy(entropy))
     }
 
     fn collapse(&mut self) -> Option<State>;
 }
 
 pub trait Location<const DIMENSIONS: usize> {}
-pub trait Direction<const COUNT: usize> {}
+pub trait Direction<const COUNT: usize> {
+    fn mirror(self) -> Self;
+}
 
 pub trait GridInterface<
     const NEIGHBOURS_PER_TILE: usize,
@@ -40,8 +41,14 @@ pub trait GridInterface<
 {
     fn image(&self) -> HashMap<TPosition, T>;
     fn get_tile(&self, location: TPosition) -> Option<T>;
-    fn get_neighbours(&self, location: TPosition)
-    -> [(TDirection, Option<T>); NEIGHBOURS_PER_TILE];
+    fn get_neighbours(
+        &self,
+        location: TPosition,
+    ) -> [(TDirection, Option<TPosition>); NEIGHBOURS_PER_TILE];
+    fn get_neighbour_tiles(
+        &self,
+        location: TPosition,
+    ) -> [(TDirection, Option<T>); NEIGHBOURS_PER_TILE];
 
     /// Fetches the tile at the given location and gives you mutable access to it
     fn with_tile<R, F: Fn(&mut T) -> R>(&mut self, location: TPosition, f: F) -> Option<R>;
@@ -54,6 +61,12 @@ pub enum WaveFunctionCollapseInterruption<TPosition> {
     MaxIterationsReached,
 }
 
+#[derive(Debug)]
+pub struct PropagateQueueEntry<TPosition> {
+    pub source: TPosition,
+    pub target: TPosition,
+}
+
 pub type TickResult<TPosition> = Result<(), WaveFunctionCollapseInterruption<TPosition>>;
 pub trait WaveFunctionCollapse<TPosition> {
     fn find_lowest_entropy(&mut self) -> Option<TPosition>;
@@ -61,6 +74,11 @@ pub trait WaveFunctionCollapse<TPosition> {
         &mut self,
         position: TPosition,
     ) -> Result<(), WaveFunctionCollapseInterruption<TPosition>>;
+    // breadth first
+    fn propagate(
+        &mut self,
+        queue: VecDeque<PropagateQueueEntry<TPosition>>,
+    ) -> TickResult<TPosition>;
     fn tick(&mut self) -> TickResult<TPosition>;
 
     fn run(&mut self, max_iterations: usize) -> TickResult<TPosition> {
