@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use rand::seq::IteratorRandom;
+
 use crate::{interface::TileInterface, space::Location2D};
 
 // We can find a better representation later, for now we'll just use the output of the rust hasher
@@ -52,7 +54,10 @@ impl TileInterface<TileState, Location2D> for Tile {
     }
 
     fn collapse(&mut self) -> Option<TileState> {
-        let chosen_state = self.possible_states().next()?;
+        let mut rng = rand::rng();
+        // TODO: Non-uniform sampling
+        let chosen_state = self.possible_states().choose(&mut rng)?;
+
         self.set_possible_states(BTreeSet::from([chosen_state]));
         Some(chosen_state)
     }
