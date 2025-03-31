@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::{
     grid::ConstantSizeGrid2D,
@@ -29,7 +29,7 @@ fn checkers() {
     const STATE_BLACK: u64 = 0;
     const STATE_WHITE: u64 = 1;
 
-    let possible = HashSet::from([STATE_BLACK, STATE_WHITE]);
+    let possible = BTreeSet::from([STATE_BLACK, STATE_WHITE]);
     let mut grid = ConstantSizeGrid2D::<W, H>::new(possible);
     debug_print(&grid);
     for _ in 0..((W * H) + 1) {

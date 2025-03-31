@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use aaltofunktionromautus::{
     grid::ConstantSizeGrid2D,
@@ -24,13 +24,13 @@ fn debug_print<const W: usize, const H: usize>(grid: &ConstantSizeGrid2D<W, H>) 
 }
 
 fn main() {
-    const W: usize = 30;
-    const H: usize = 30;
+    const W: usize = 5;
+    const H: usize = 5;
 
     const STATE_BLACK: u64 = 0;
     const STATE_WHITE: u64 = 1;
 
-    let possible = HashSet::from([STATE_BLACK, STATE_WHITE]);
+    let possible = BTreeSet::from([STATE_BLACK, STATE_WHITE]);
     let mut grid = ConstantSizeGrid2D::<W, H>::new(possible);
     debug_print(&grid);
     for _ in 0..((W * H) + 1) {

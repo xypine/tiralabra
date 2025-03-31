@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::{interface::TileInterface, space::Location2D};
 
@@ -8,7 +8,7 @@ pub type TileState = u64;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tile {
-    possible_states: HashSet<TileState>,
+    possible_states: BTreeSet<TileState>,
     // can be calculated from possible_states, but we can spare some memory for better performance
     collapsed: bool,
 }
@@ -19,7 +19,7 @@ impl Tile {
         self.collapsed = self.possible_states.len() == 1;
     }
 
-    pub fn new(possible: HashSet<TileState>) -> Self {
+    pub fn new(possible: BTreeSet<TileState>) -> Self {
         let mut new = Self {
             possible_states: possible,
             collapsed: false,
@@ -30,7 +30,7 @@ impl Tile {
         new
     }
 
-    pub fn set_possible_states(&mut self, states: HashSet<TileState>) {
+    pub fn set_possible_states(&mut self, states: BTreeSet<TileState>) {
         self.possible_states = states;
         self.invalidate_cache();
     }
@@ -53,7 +53,7 @@ impl TileInterface<TileState, Location2D> for Tile {
 
     fn collapse(&mut self) -> Option<TileState> {
         let chosen_state = self.possible_states().next()?;
-        self.set_possible_states(HashSet::from([chosen_state]));
+        self.set_possible_states(BTreeSet::from([chosen_state]));
         Some(chosen_state)
     }
 }
@@ -64,13 +64,13 @@ mod tests {
 
     #[test]
     fn entropy_calculation_sanity() {
-        let tile_0_states = Tile::new(HashSet::from([]));
+        let tile_0_states = Tile::new(BTreeSet::from([]));
         assert!(!tile_0_states.has_collapsed());
-        let tile_1_states = Tile::new(HashSet::from([1]));
+        let tile_1_states = Tile::new(BTreeSet::from([1]));
         assert!(tile_1_states.has_collapsed());
-        let tile_2_states = Tile::new(HashSet::from([1, 2]));
+        let tile_2_states = Tile::new(BTreeSet::from([1, 2]));
         assert!(!tile_2_states.has_collapsed());
-        let tile_3_states = Tile::new(HashSet::from([1, 2, 3]));
+        let tile_3_states = Tile::new(BTreeSet::from([1, 2, 3]));
         assert!(!tile_3_states.has_collapsed());
 
         // tiles with zero or one state(s) cannot be collapsed

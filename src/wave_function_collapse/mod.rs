@@ -40,7 +40,7 @@ impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for Consta
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::BTreeSet;
 
     use super::*;
 
@@ -48,7 +48,7 @@ mod tests {
     fn find_lowest_entropy_sanity() {
         const W: usize = 2;
         const H: usize = 2;
-        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(HashSet::from([1, 2, 3]));
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(BTreeSet::from([1, 2, 3]));
 
         let lowest_entropy_location = Location2D { x: 0, y: 1 };
         assert_eq!(
@@ -60,7 +60,7 @@ mod tests {
         );
 
         grid.with_tile(lowest_entropy_location, |t| {
-            t.set_possible_states(HashSet::from([1, 2]))
+            t.set_possible_states(BTreeSet::from([1, 2]))
         });
 
         assert_eq!(

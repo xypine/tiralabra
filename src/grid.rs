@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{BTreeSet, BinaryHeap, HashMap};
 
 use crate::{
     entropy::EntropyHeapEntry,
@@ -12,7 +12,7 @@ pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
     // Priority queue based on tile entropy
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
     // Used to invalidate entries in the entropy_heap
-    tile_invalidation_matrix: [[usize; H]; W],
+    entropy_invalidation_matrix: [[usize; H]; W],
 }
 impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
     pub fn tiles(&self) -> &[[Tile; H]; W] {
@@ -41,7 +41,7 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
     pub fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
         if let Some(candidate) = self.entropy_heap.peek() {
             let current_version =
-                self.tile_invalidation_matrix[candidate.location.x][candidate.location.y];
+                self.entropy_invalidation_matrix[candidate.location.x][candidate.location.y];
             if candidate.version < current_version {
                 //println!(
                 //    "candidate {:?} was outdated (latest {current_version})",
@@ -58,11 +58,11 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
 
     #[inline]
     fn update_tile_entropy(&mut self, location: Location2D) {
-        let current_version = self.tile_invalidation_matrix[location.x][location.y];
+        let current_version = self.entropy_invalidation_matrix[location.x][location.y];
         let new_entropy = self.tiles[location.x][location.y].calculate_entropy();
         let new_version = current_version + 1;
         //println!("UPD {location:?}v{new_version} = {new_entropy:?}");
-        self.tile_invalidation_matrix[location.x][location.y] = new_version;
+        self.entropy_invalidation_matrix[location.x][location.y] = new_version;
         self.entropy_heap.push(EntropyHeapEntry {
             location,
             entropy: new_entropy,
@@ -72,7 +72,7 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
 }
 
 impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
-    pub fn new(possible_tile_states: HashSet<TileState>) -> Self {
+    pub fn new(possible_tile_states: BTreeSet<TileState>) -> Self {
         let tiles = std::array::from_fn(|_| {
             std::array::from_fn(|_| Tile::new(possible_tile_states.clone()))
         });
@@ -80,7 +80,7 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
         let mut new = Self {
             tiles,
             entropy_heap: BinaryHeap::new(),
-            tile_invalidation_matrix,
+            entropy_invalidation_matrix: tile_invalidation_matrix,
         };
 
         for x in 0..W {
@@ -140,6 +140,8 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::interface::TileInterface;
 
     use super::*;
@@ -160,7 +162,7 @@ mod tests {
     }
 
     fn init_and_check<const W: usize, const H: usize>(
-        possible: HashSet<TileState>,
+        possible: BTreeSet<TileState>,
     ) -> ConstantSizeGrid2D<W, H> {
         let grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(possible);
         assert_eq!(grid.tiles.len(), W);
@@ -172,11 +174,11 @@ mod tests {
     }
 
     fn init_id<const W: usize, const H: usize>() -> ConstantSizeGrid2D<W, H> {
-        let mut grid = init_and_check::<W, H>(HashSet::new());
+        let mut grid = init_and_check::<W, H>(BTreeSet::new());
         for x in 0..W {
             for y in 0..H {
                 let unique = id(Location2D { x, y }, W, H);
-                grid.tiles[x][y].set_possible_states(HashSet::from([unique]));
+                grid.tiles[x][y].set_possible_states(BTreeSet::from([unique]));
             }
         }
 
@@ -185,19 +187,19 @@ mod tests {
 
     #[test]
     fn init() {
-        init_and_check::<3, 3>(HashSet::new());
+        init_and_check::<3, 3>(BTreeSet::new());
     }
 
     #[test]
     fn init_asymmetric() {
-        init_and_check::<3, 4>(HashSet::new());
+        init_and_check::<3, 4>(BTreeSet::new());
     }
 
     #[test]
     fn init_and_image() {
         const W: usize = 5;
         const H: usize = 3;
-        let init_possible: HashSet<TileState> = HashSet::from([0, 1, 2, 3]);
+        let init_possible: BTreeSet<TileState> = BTreeSet::from([0, 1, 2, 3]);
         let grid = init_and_check::<W, H>(init_possible.clone());
         let image = grid.image();
         (0..W).for_each(|x| {
@@ -205,7 +207,7 @@ mod tests {
                 let tile = image
                     .get(&Location2D { x, y })
                     .expect("failed to access tile");
-                let tile_possible = HashSet::from_iter(tile.possible_states());
+                let tile_possible = BTreeSet::from_iter(tile.possible_states());
                 assert_eq!(tile_possible, init_possible);
             });
         });
