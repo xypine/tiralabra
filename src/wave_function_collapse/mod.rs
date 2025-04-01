@@ -4,15 +4,17 @@ mod e2e_tests;
 use std::collections::VecDeque;
 
 use crate::{
-    grid::ConstantSizeGrid2D,
     interface::{
         GridInterface, PropagateQueueEntry, TileInterface, WaveFunctionCollapse,
         WaveFunctionCollapseInterruption,
     },
-    space::{Direction2D, Location2D},
+    tile::{Tile, TileState},
+    utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
-impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for ConstantSizeGrid2D<W, H> {
+impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>>
+    WaveFunctionCollapse<Location2D> for T
+{
     fn find_lowest_entropy(&mut self) -> Option<Location2D> {
         self.get_lowest_entropy_position()
     }
@@ -55,7 +57,7 @@ impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for Consta
                 let source = self
                     .get_tile(queue_entry.source)
                     .expect("getting propagation source");
-                let rules = self.rules.clone();
+                let rules = self.get_rules().clone();
                 let was_collapsed = self
                     .with_tile(queue_entry.target, |target| {
                         if target.has_collapsed() {
@@ -99,7 +101,7 @@ impl<const W: usize, const H: usize> WaveFunctionCollapse<Location2D> for Consta
 mod tests {
     use std::collections::{BTreeSet, HashSet};
 
-    use crate::rules::RuleSet;
+    use crate::{grid::constant_2d::ConstantSizeGrid2D, rules::RuleSet};
 
     use super::*;
 

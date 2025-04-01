@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq> {
+pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     pub possible: BTreeSet<TileState>,
     // direction agnostic, also contains mirrored pairs
     pub allowed: HashSet<(TileState, TDirection, TileState)>,

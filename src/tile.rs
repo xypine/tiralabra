@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use rand::seq::IteratorRandom;
 
-use crate::{interface::TileInterface, space::Location2D};
+use crate::{interface::TileInterface, utils::space::Location2D};
 
 // We can find a better representation later, for now we'll just use the output of the rust hasher
 // trait

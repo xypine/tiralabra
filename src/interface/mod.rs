@@ -1,6 +1,11 @@
-use std::collections::{HashMap, VecDeque};
+pub mod wasm;
 
-use crate::entropy::Entropy;
+use std::{
+    collections::{HashMap, VecDeque},
+    hash::Hash,
+};
+
+use crate::{rules::RuleSet, utils::entropy::Entropy};
 
 pub trait TileInterface<State, TCoords> {
     fn possible_states(&self) -> impl Iterator<Item = State>;
@@ -27,7 +32,7 @@ pub trait TileInterface<State, TCoords> {
 }
 
 pub trait Location<const DIMENSIONS: usize> {}
-pub trait Direction<const COUNT: usize> {
+pub trait Direction<const COUNT: usize>: Hash + Eq {
     fn mirror(self) -> Self;
 }
 
@@ -50,8 +55,12 @@ pub trait GridInterface<
         location: TPosition,
     ) -> [(TDirection, Option<T>); NEIGHBOURS_PER_TILE];
 
+    fn get_lowest_entropy_position(&mut self) -> Option<TPosition>;
+
     /// Fetches the tile at the given location and gives you mutable access to it
     fn with_tile<R, F: Fn(&mut T) -> R>(&mut self, location: TPosition, f: F) -> Option<R>;
+
+    fn get_rules(&self) -> RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
 }
 
 #[derive(Debug, Clone, Copy, thiserror::Error)]

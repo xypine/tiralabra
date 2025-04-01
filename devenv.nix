@@ -11,7 +11,12 @@
   dotenv.enable = true;
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.bacon ];
+  packages = [
+    # Allows running tests as code changes
+    pkgs.bacon
+    # Easy compilation to web assembly
+    pkgs.wasm-pack
+  ];
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;

@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::space::Location2D;
+use crate::utils::space::Location2D;
 
 // comparisons can fail for floating point numbers if one of the entropies is "NaN"
 // praise the IEEC

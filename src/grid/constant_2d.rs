@@ -1,11 +1,13 @@
 use std::collections::{BinaryHeap, HashMap};
 
 use crate::{
-    entropy::EntropyHeapEntry,
     interface::{GridInterface, TileInterface},
     rules::RuleSet,
-    space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     tile::{Tile, TileState},
+    utils::{
+        entropy::EntropyHeapEntry,
+        space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+    },
 };
 
 pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
@@ -17,15 +19,6 @@ pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
     entropy_invalidation_matrix: [[usize; H]; W],
 }
 impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
-    pub fn tiles(&self) -> &[[Tile; H]; W] {
-        &self.tiles
-    }
-
-    // copies the data for the caller
-    pub fn get_tiles(&self) -> [[Tile; H]; W] {
-        self.tiles.clone()
-    }
-
     fn update_tile(&mut self, location: Location2D, state: Tile) -> Option<()> {
         let current_state = self.get_tile(location)?;
 
@@ -38,24 +31,6 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
         self.update_tile_entropy(location);
 
         Some(())
-    }
-
-    pub fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
-        if let Some(candidate) = self.entropy_heap.peek() {
-            let current_version =
-                self.entropy_invalidation_matrix[candidate.location.x][candidate.location.y];
-            if candidate.version < current_version {
-                //println!(
-                //    "candidate {:?} was outdated (latest {current_version})",
-                //    candidate
-                //);
-                let _ = self.entropy_heap.pop();
-                return self.get_lowest_entropy_position();
-            }
-            // println!("PICKED {:?}", candidate);
-            return Some(candidate.location);
-        }
-        None
     }
 
     #[inline]
@@ -136,6 +111,24 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         })
     }
 
+    fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
+        if let Some(candidate) = self.entropy_heap.peek() {
+            let current_version =
+                self.entropy_invalidation_matrix[candidate.location.x][candidate.location.y];
+            if candidate.version < current_version {
+                //println!(
+                //    "candidate {:?} was outdated (latest {current_version})",
+                //    candidate
+                //);
+                let _ = self.entropy_heap.pop();
+                return self.get_lowest_entropy_position();
+            }
+            // println!("PICKED {:?}", candidate);
+            return Some(candidate.location);
+        }
+        None
+    }
+
     fn with_tile<R, F: Fn(&mut Tile) -> R>(&mut self, location: Location2D, f: F) -> Option<R> {
         let mut mutable_copy = self.get_tile(location)?;
         let result = f(&mut mutable_copy);
@@ -154,6 +147,10 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
             };
             (direction, neighbour)
         })
+    }
+
+    fn get_rules(&self) -> RuleSet<4, Direction2D> {
+        self.rules.clone()
     }
 }
 
@@ -234,52 +231,14 @@ mod tests {
         });
     }
 
-    fn assert_tile_state(tile: &Tile, expected: TileState) {
-        let mut tile_possible = tile.possible_states();
-        assert_eq!(
-            tile_possible
-                .next()
-                .expect("tile should've been initialized with one possible state"),
-            expected,
-            "tile state didn't match expectations"
-        );
-        assert!(
-            tile_possible.next().is_none(),
-            "tile should've been initialized with one possible state",
-        )
-    }
-
     #[test]
     fn init_and_access() {
         const W: usize = 4;
         const H: usize = 6;
         let grid = init_id::<W, H>();
         debug_print(&grid);
-        let mut seen_ids = HashSet::new();
-        (0..W).for_each(|x| {
-            (0..H).for_each(|y| {
-                let tile = grid
-                    .get_tile(Location2D { x, y })
-                    .expect("get_tile should succeed inside W and H");
-                let unique = id(Location2D { x, y }, W, H);
 
-                assert_tile_state(&tile, unique);
-
-                println!("adding {unique} from ({x}, {y})");
-                println!("{:?}", seen_ids);
-
-                let tile_is_unique = !seen_ids.contains(&unique);
-                assert!(tile_is_unique);
-
-                seen_ids.insert(unique);
-            });
-        });
-        (W..(W * 2)).for_each(|x| {
-            (H..(H * 2)).for_each(|y| {
-                let tile = grid.get_tile(Location2D { x, y });
-                assert!(tile.is_none(), "get_tile should fail outside W and H");
-            });
-        });
+        crate::grid::tests::get_tile(W, H, grid);
     }
 
     #[test]
@@ -289,47 +248,6 @@ mod tests {
         let grid = init_id::<W, H>();
         debug_print(&grid);
 
-        let test_tile_neighbours =
-            |location: Location2D, expected_neighbours: [Option<Location2D>; 4]| {
-                let our_id = id(location, W, H);
-                let tile = grid.get_tile(location).unwrap();
-                assert_tile_state(&tile, our_id);
-
-                let mut expected_neighbour_ids = vec![];
-                for neighbour_location in expected_neighbours {
-                    if let Some(neighbour_location) = neighbour_location {
-                        let neighbour_id = id(neighbour_location, W, H);
-                        let neighbour = grid.get_tile(neighbour_location).unwrap();
-                        assert_tile_state(&neighbour, neighbour_id);
-                        expected_neighbour_ids.push(Some(neighbour_id));
-                    } else {
-                        expected_neighbour_ids.push(None);
-                    }
-                }
-
-                let impl_neighbours = grid.get_neighbour_tiles(location);
-                for (i, (dir, impl_neighbour)) in impl_neighbours.iter().cloned().enumerate() {
-                    println!("=== Neighbour {i} ===");
-                    println!("impl resolved to direction {dir:?}");
-                    if let Some(reference_id) = expected_neighbour_ids[i] {
-                        let impl_neighbour =
-                            impl_neighbour.expect("get_neighbours missing neighbour");
-                        assert_tile_state(&impl_neighbour, reference_id);
-                    } else {
-                        assert!(impl_neighbour.is_none())
-                    }
-                }
-            };
-
-        // Middle tile
-        test_tile_neighbours(
-            Location2D { x: 1, y: 1 },
-            [
-                Some(Location2D { x: 1, y: 0 }),
-                Some(Location2D { x: 2, y: 1 }),
-                Some(Location2D { x: 1, y: 2 }),
-                Some(Location2D { x: 0, y: 1 }),
-            ],
-        );
+        crate::grid::tests::get_neighbours_sanity(W, H, grid);
     }
 }
