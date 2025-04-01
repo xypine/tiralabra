@@ -3,12 +3,16 @@ use std::{
     ops::{Add, Sub},
 };
 
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+
 use crate::interface::{Direction, Location};
 
 pub const AXIS_2D: usize = 2;
 pub const NEIGHBOUR_COUNT_2D: usize = 2 * AXIS_2D;
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Vector2D<T: Copy> {
     pub x: T,
     pub y: T,
@@ -73,7 +77,8 @@ impl Sub<Delta2D> for Delta2D {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Direction2D {
     UP = 0,
     RIGHT = 1,

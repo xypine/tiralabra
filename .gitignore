@@ -3,3 +3,5 @@
 .devenv/
 .devenv.flake.nix
 .direnv/
+
+pkg/

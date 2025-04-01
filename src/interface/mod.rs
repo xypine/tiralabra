@@ -63,7 +63,8 @@ pub trait GridInterface<
     fn get_rules(&self) -> RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
 }
 
-#[derive(Debug, Clone, Copy, thiserror::Error)]
+use serde::Serialize;
+#[derive(Debug, Clone, Copy, thiserror::Error, Serialize)]
 pub enum WaveFunctionCollapseInterruption<TPosition> {
     Finished,
     Contradiction(TPosition),

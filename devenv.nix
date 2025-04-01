@@ -16,11 +16,18 @@
     pkgs.bacon
     # Easy compilation to web assembly
     pkgs.wasm-pack
+    pkgs.wasm-bindgen-cli
   ];
 
   # https://devenv.sh/languages/
-  languages.rust.enable = true;
-  languages.rust.channel = "nightly";
+  languages.rust = {
+    enable = true;
+    channel = "nightly";
+    targets = [
+      "x86_64-unknown-linux-gnu"
+      "wasm32-unknown-unknown"
+    ];
+  };
 
   # https://devenv.sh/processes/
   # processes.cargo-watch.exec = "cargo-watch";

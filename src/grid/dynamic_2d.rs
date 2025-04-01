@@ -1,5 +1,8 @@
 use std::collections::{BinaryHeap, HashMap};
 
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+
 use crate::{
     interface::{GridInterface, TileInterface},
     rules::RuleSet,
@@ -10,6 +13,8 @@ use crate::{
     },
 };
 
+#[derive(Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DynamicSizeGrid2D {
     pub rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
     pub width: usize,
@@ -100,9 +105,7 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {
         let mut map = HashMap::new();
         for (i, tile) in self.tiles.iter().enumerate() {
-            let x = i % self.width;
-            let y = i / self.width;
-            let position = Location2D { x, y };
+            let position = self.index_to_location(i);
             map.insert(position, tile.clone());
         }
         map

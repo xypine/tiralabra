@@ -3,17 +3,24 @@ use std::{
     hash::Hash,
 };
 
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+
 use crate::{
     interface::{Direction, TileInterface},
     tile::TileState,
+    utils::space::{Direction2D, NEIGHBOUR_COUNT_2D},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     pub possible: BTreeSet<TileState>,
     // direction agnostic, also contains mirrored pairs
     pub allowed: HashSet<(TileState, TDirection, TileState)>,
 }
+
+pub type RuleSet2D = RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>;
 
 impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Copy>
     RuleSet<NEIGHBOURS, TDirection>

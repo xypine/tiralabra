@@ -1,6 +1,8 @@
 use std::collections::BTreeSet;
 
 use rand::seq::IteratorRandom;
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
 
 use crate::{interface::TileInterface, utils::space::Location2D};
 
@@ -8,7 +10,8 @@ use crate::{interface::TileInterface, utils::space::Location2D};
 // trait
 pub type TileState = u64;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Tile {
     possible_states: BTreeSet<TileState>,
     // can be calculated from possible_states, but we can spare some memory for better performance

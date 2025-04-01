@@ -1,10 +1,14 @@
 use std::cmp::Ordering;
 
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+
 use crate::utils::space::Location2D;
 
 // comparisons can fail for floating point numbers if one of the entropies is "NaN"
 // praise the IEEC
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Entropy(pub f64);
 
 impl Eq for Entropy {} // Safe because we guarantee consistent Ord
@@ -15,7 +19,8 @@ impl Ord for Entropy {
     }
 }
 
-#[derive(Debug, Eq, Clone, Copy, PartialEq)]
+#[derive(Debug, Eq, Clone, Copy, PartialEq, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct EntropyHeapEntry {
     pub location: Location2D,
     pub entropy: Entropy,

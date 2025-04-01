@@ -1,6 +1,7 @@
 1. What have I done this week?
 
 - implemented propagation: ~3h
+- refactor, implement dynamic sized grids: ~3h
 
 2. How has the program progressed?
 
