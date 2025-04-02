@@ -1,20 +1,52 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashSet};
 
 use wasm_bindgen::prelude::*;
 
 use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
-    interface::{GridInterface, TickResult, WaveFunctionCollapse},
+    interface::{GridInterface, WaveFunctionCollapse},
     rules::RuleSet2D,
-    tile::Tile,
-    utils::space::Location2D,
+    tile::TileState,
+    utils::space::Direction2D,
 };
 
 #[wasm_bindgen]
-pub struct Grid(DynamicSizeGrid2D);
+pub struct RulePair(TileState, Direction2D, TileState);
+#[wasm_bindgen]
+impl RulePair {
+    #[wasm_bindgen(constructor)]
+    pub fn new(a: TileState, dir: Direction2D, b: TileState) -> Self {
+        Self(a, dir, b)
+    }
+}
 
 #[wasm_bindgen]
 pub struct Rules(RuleSet2D);
+
+#[wasm_bindgen]
+impl Rules {
+    #[wasm_bindgen(constructor)]
+    pub fn new(possible: Vec<TileState>, allowed: Vec<RulePair>) -> Self {
+        let inner = RuleSet2D::new(
+            BTreeSet::from_iter(possible),
+            HashSet::from_iter(allowed.into_iter().map(|p| (p.0, p.1, p.2))),
+        );
+        Self(inner)
+    }
+
+    pub fn checkers() -> Self {
+        let inner = crate::rules::samples::checkers::rules();
+        Self(inner)
+    }
+
+    pub fn terrain() -> Self {
+        let inner = crate::rules::samples::terrain::rules();
+        Self(inner)
+    }
+}
+
+#[wasm_bindgen]
+pub struct Grid(DynamicSizeGrid2D);
 
 #[wasm_bindgen]
 impl Grid {

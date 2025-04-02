@@ -11,12 +11,14 @@
   dotenv.enable = true;
 
   # https://devenv.sh/packages/
-  packages = [
+  packages = with pkgs; [
     # Allows running tests as code changes
-    pkgs.bacon
+    bacon
     # Easy compilation to web assembly
-    pkgs.wasm-pack
-    pkgs.wasm-bindgen-cli
+    wasm-pack
+    wasm-bindgen-cli
+    # Frontend
+    nodejs
   ];
 
   # https://devenv.sh/languages/
