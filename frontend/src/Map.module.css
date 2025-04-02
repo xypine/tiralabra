@@ -1,0 +1,31 @@
+.tile {
+  margin: 0;
+  width: 1rem;
+  height: 1rem;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+.tile[data-tile="0"] {
+  background: #00008b;
+  font-size: 0;
+}
+
+.tile[data-tile="1"] {
+  background: #0000ff;
+  font-size: 0;
+}
+
+.tile[data-tile="2"] {
+  background: #fff8dc;
+  font-size: 0;
+}
+
+.tile[data-tile="3"] {
+  background: #008000;
+  font-size: 0;
+}
+.tile[data-tile="4"] {
+  background: #006400;
+  font-size: 0;
+}

@@ -6,8 +6,8 @@ import styles from "./App.module.css";
 
 export type VisualGrid = Map<Location2D, Tile>;
 
-export const W = 20;
-export const H = 20;
+export const W = 30;
+export const H = 30;
 
 function locationToIndex(location: Location2D, width: number): number {
   return location.y * width + location.x;
@@ -51,6 +51,7 @@ const App: Component = () => {
   };
 
   function tick() {
+    setTickActive(false);
     let g = grid();
     if (g) {
       const res = g.tick();
@@ -58,11 +59,13 @@ const App: Component = () => {
         const rules = Rules.terrain();
         g = new Grid(rules, W, H);
       }
-      if (res === undefined) {
-        setTickActive(false);
-      }
       setGrid(null);
       setGrid(g);
+      if (res === undefined) {
+        setTickActive(false);
+      } else {
+        setTickActive(true);
+      }
     }
   }
   const interval = setInterval(() => {
@@ -70,7 +73,7 @@ const App: Component = () => {
       return;
     }
     tick();
-  }, 20);
+  }, 2);
   onCleanup(() => clearInterval(interval));
 
   return (

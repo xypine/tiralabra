@@ -1,5 +1,7 @@
 import { Component, For } from "solid-js";
-import type { Location2D, Tile } from "aaltofunktionromautus";
+import type { Tile } from "aaltofunktionromautus";
+
+import styles from "./Map.module.css";
 
 const Map: Component<{ tiles: Tile[][] }> = ({ tiles }) => {
   return (
@@ -17,12 +19,12 @@ const Map: Component<{ tiles: Tile[][] }> = ({ tiles }) => {
                 {(item, y) => (
                   <div data-index={y()}>
                     <p
-                      style={{
-                        margin: 0,
-                        width: "2rem",
-                        height: "2rem",
-                        padding: "0.5rem",
-                      }}
+                      class={styles.tile}
+                      data-tile={
+                        item.possible_states.length === 1
+                          ? item.possible_states[0]
+                          : undefined
+                      }
                     >
                       {item.possible_states.length === 1
                         ? item.possible_states[0]
