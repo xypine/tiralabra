@@ -2,12 +2,13 @@ use std::collections::BTreeSet;
 
 use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify_next::{Tsify, declare};
 
 use crate::{interface::TileInterface, utils::space::Location2D};
 
 // We can find a better representation later, for now we'll just use the output of the rust hasher
 // trait
+#[declare]
 pub type TileState = u64;
 
 #[derive(Debug, Clone, PartialEq, Tsify, Serialize, Deserialize)]

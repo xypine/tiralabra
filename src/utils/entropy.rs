@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify_next::Tsify;
 
 use crate::utils::space::Location2D;
 

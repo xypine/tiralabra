@@ -3,6 +3,7 @@
 - implemented propagation: ~3h
 - refactor, implement dynamic sized grids: ~3h
 - initialized frontend, got web assembly working: ~2h
+- got frontend to display a 2d grid, deployed with docker: ~3h
 
 2. How has the program progressed?
 

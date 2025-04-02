@@ -1,7 +1,7 @@
 use std::collections::{BinaryHeap, HashMap};
 
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify_next::Tsify;
 
 use crate::{
     interface::{GridInterface, TileInterface},
@@ -16,11 +16,13 @@ use crate::{
 #[derive(Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DynamicSizeGrid2D {
+    #[tsify(type = "RuleSet<Direction2D>")]
     pub rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
     pub width: usize,
     pub height: usize,
     tiles: Vec<Tile>,
     // Priority queue based on tile entropy
+    #[tsify(type = "any")]
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
     // Used to invalidate entries in the entropy_heap
     entropy_invalidation_matrix: Vec<usize>,
@@ -59,6 +61,10 @@ impl DynamicSizeGrid2D {
         } else {
             // no updated version is pushed, so it's impossible for the tile to be picked
         }
+    }
+
+    pub fn dump(&self) -> Vec<Tile> {
+        self.tiles.clone()
     }
 }
 

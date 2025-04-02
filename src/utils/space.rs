@@ -4,7 +4,8 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify_next::Tsify;
+use tsify_next::declare;
 
 use crate::interface::{Direction, Location};
 
@@ -12,12 +13,12 @@ pub const AXIS_2D: usize = 2;
 pub const NEIGHBOUR_COUNT_2D: usize = 2 * AXIS_2D;
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Tsify, Serialize, Deserialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Vector2D<T: Copy> {
     pub x: T,
     pub y: T,
 }
 
+#[declare]
 pub type Location2D = Vector2D<usize>;
 impl Location2D {
     pub fn try_apply(self, delta: Delta2D) -> Result<Self, TryFromIntError> {

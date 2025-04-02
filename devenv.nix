@@ -19,6 +19,7 @@
     wasm-bindgen-cli
     # Frontend
     nodejs
+    pnpm
   ];
 
   # https://devenv.sh/languages/

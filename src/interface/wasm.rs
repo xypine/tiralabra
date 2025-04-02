@@ -1,13 +1,15 @@
 use std::collections::{BTreeSet, HashSet};
 
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
     interface::{GridInterface, WaveFunctionCollapse},
     rules::RuleSet2D,
-    tile::TileState,
-    utils::space::Direction2D,
+    tile::{Tile, TileState},
+    utils::space::{Direction2D, Location2D},
 };
 
 #[wasm_bindgen]
@@ -56,9 +58,8 @@ impl Grid {
         Self(inner)
     }
 
-    pub fn image(&self) -> JsValue {
-        let map = self.0.image();
-        serde_wasm_bindgen::to_value(&map).unwrap()
+    pub fn dump(&self) -> Vec<Tile> {
+        self.0.dump()
     }
 
     pub fn tick(&mut self) -> Option<bool> {

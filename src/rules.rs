@@ -4,7 +4,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify_next::Tsify;
 
 use crate::{
     interface::{Direction, TileInterface},
@@ -13,7 +13,6 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Tsify, Serialize, Deserialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     pub possible: BTreeSet<TileState>,
     // direction agnostic, also contains mirrored pairs

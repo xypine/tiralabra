@@ -25,7 +25,9 @@ pub trait TileInterface<State, TCoords> {
         // TODO: Replace with the actual entropy calculation
         let possible = self.possible_states().count();
         let entropy = possible as f64;
-        Some(Entropy(entropy))
+        let mut rng = rand::rng();
+        let random = rng.random_range(0.0..0.2);
+        Some(Entropy(entropy + random))
     }
 
     fn collapse(&mut self) -> Option<State>;
@@ -63,6 +65,7 @@ pub trait GridInterface<
     fn get_rules(&self) -> RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
 }
 
+use rand::Rng;
 use serde::Serialize;
 #[derive(Debug, Clone, Copy, thiserror::Error, Serialize)]
 pub enum WaveFunctionCollapseInterruption<TPosition> {
