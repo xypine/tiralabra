@@ -3,33 +3,49 @@ import type { Tile } from "aaltofunktionromautus";
 
 import styles from "./Map.module.css";
 
-const Map: Component<{ tiles: Tile[][] }> = ({ tiles }) => {
+const Map: Component<{
+  tiles: Tile[][];
+  onTileClick: (x: number, y: number) => void;
+}> = ({ tiles, onTileClick }) => {
   return (
-    <>
+    <div
+      style={{
+        display: "flex",
+        "flex-direction": "column",
+      }}
+    >
       <For each={tiles}>
-        {(row, x) => (
+        {(row, y) => (
           <div
-            data-index={x()}
+            data-index={y()}
             style={{
               display: "flex",
             }}
           >
             {
               <For each={row}>
-                {(item, y) => (
+                {(item, x) => (
                   <div data-index={y()}>
-                    <p
-                      class={styles.tile}
+                    <div
+                      class={styles.tile_container}
+                      style={{
+                        "--states": item.possible_states.length,
+                      }}
                       data-tile={
                         item.possible_states.length === 1
                           ? item.possible_states[0]
                           : undefined
                       }
+                      onClick={() => {
+                        onTileClick(x(), y());
+                      }}
                     >
-                      {item.possible_states.length === 1
-                        ? item.possible_states[0]
-                        : item.possible_states.length + "?"}
-                    </p>
+                      <For each={item.possible_states}>
+                        {(state) => (
+                          <div class={styles.tile} data-tile={state} />
+                        )}
+                      </For>
+                    </div>
                   </div>
                 )}
               </For>
@@ -37,7 +53,7 @@ const Map: Component<{ tiles: Tile[][] }> = ({ tiles }) => {
           </div>
         )}
       </For>
-    </>
+    </div>
   );
 };
 

@@ -1,9 +1,20 @@
-.tile {
+.tile_container {
   margin: 0;
   width: 1rem;
   height: 1rem;
   padding: 0.5rem;
   font-size: 1rem;
+
+  position: relative;
+}
+
+.tile {
+  opacity: calc(1 / var(--states));
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 
 .tile[data-tile="0"] {

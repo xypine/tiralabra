@@ -52,6 +52,8 @@ const App: Component = () => {
 
   function tick() {
     setTickActive(false);
+    // const id = "tick_" + Math.random();
+    // console.time(id);
     let g = grid();
     if (g) {
       const res = g.tick();
@@ -67,7 +69,19 @@ const App: Component = () => {
         setTickActive(true);
       }
     }
+    // console.timeEnd(id);
   }
+  function collapse(x: number, y: number) {
+    setTickActive(false);
+    let g = grid();
+    if (g) {
+      const res = g.collapse(x, y);
+      console.debug(res);
+      setGrid(null);
+      setGrid(g);
+    }
+  }
+
   const interval = setInterval(() => {
     if (!tickActive() || !wasmReady()) {
       return;
@@ -80,7 +94,13 @@ const App: Component = () => {
     <div class={styles.App}>
       <header class={styles.header}>
         <Show when={tiles() != null}>
-          <Map tiles={tiles()!} />
+          <Map
+            tiles={tiles()!}
+            onTileClick={(x, y) => {
+              console.debug({ x, y });
+              collapse(x, y);
+            }}
+          />
         </Show>
         <button onClick={() => setTickActive(!tickActive())}>
           toggle tick

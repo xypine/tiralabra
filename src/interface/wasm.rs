@@ -1,12 +1,10 @@
 use std::collections::{BTreeSet, HashSet};
 
-use serde::{Deserialize, Serialize};
-use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
-    interface::{GridInterface, WaveFunctionCollapse},
+    interface::WaveFunctionCollapse,
     rules::RuleSet2D,
     tile::{Tile, TileState},
     utils::space::{Direction2D, Location2D},
@@ -60,6 +58,16 @@ impl Grid {
 
     pub fn dump(&self) -> Vec<Tile> {
         self.0.dump()
+    }
+
+    pub fn collapse(&mut self, x: usize, y: usize) -> Option<bool> {
+        let result = self.0.collapse(Location2D { x, y });
+        let done = match result {
+            Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
+            Err(_) => return None,
+            Ok(_) => false,
+        };
+        Some(done)
     }
 
     pub fn tick(&mut self) -> Option<bool> {

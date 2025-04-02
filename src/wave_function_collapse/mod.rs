@@ -58,17 +58,22 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                     .get_tile(queue_entry.source)
                     .expect("getting propagation source");
                 let rules = self.get_rules().clone();
-                let was_collapsed = self
+                let was_modified = self
                     .with_tile(queue_entry.target, |target| {
                         if target.has_collapsed() {
                             return false;
                         }
+                        let unmodified_length = target.possible_states_ref().count();
                         let checked_states = rules.check(target, &source, direction);
-                        target.set_possible_states(checked_states);
-                        target.has_collapsed()
+                        let modified_length = checked_states.len();
+                        let was_modified = unmodified_length != modified_length;
+                        if was_modified {
+                            target.set_possible_states(checked_states);
+                        }
+                        was_modified
                     })
                     .expect("updating tile during propagation");
-                if was_collapsed {
+                if was_modified {
                     let neighbours = self.get_neighbours(queue_entry.target);
                     for (_direction, npos) in neighbours {
                         if let Some(neighbour_position) = npos {
