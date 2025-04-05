@@ -1,3 +1,5 @@
+//! Provides an interface and structures that can be used from Web Assembly
+
 use std::collections::{BTreeSet, HashSet};
 
 use serde::{Deserialize, Serialize};

@@ -1,3 +1,5 @@
+//! Main implementation of the algorithm
+
 #[cfg(test)]
 mod e2e_tests;
 
@@ -12,13 +14,11 @@ use crate::{
     utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
+// Implements the Wave Function Collapse algorithm for any struct that implements `GridInterface`
+// See the trait for further documentation about the methods
 impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>>
     WaveFunctionCollapse<Location2D, TileState> for T
 {
-    fn find_lowest_entropy(&mut self) -> Option<Location2D> {
-        self.get_lowest_entropy_position()
-    }
-
     fn collapse(
         &mut self,
         position: Location2D,
@@ -83,21 +83,13 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                     }
                 }
             }
-            // self.propagate(queue)?;
-            //
-            // Ok(())
         }
-        // match queue.pop_front() {
-        //     None => Ok(()),
-        //     Some(queue_entry) => {
-        //     }
-        // }
         Ok(())
     }
 
     fn tick(&mut self) -> crate::interface::TickResult<Location2D> {
         let lowest_entropy = self
-            .find_lowest_entropy()
+            .get_lowest_entropy_position()
             .ok_or(WaveFunctionCollapseInterruption::Finished::<Location2D>)?;
 
         self.collapse(lowest_entropy, None)?;
@@ -142,7 +134,7 @@ mod tests {
             2
         );
 
-        let implementation = grid.find_lowest_entropy().unwrap();
+        let implementation = grid.get_lowest_entropy_position().unwrap();
         assert_eq!(lowest_entropy_location, implementation);
     }
 }
