@@ -1,5 +1,7 @@
 use std::collections::{BTreeSet, HashSet};
 
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use crate::{
@@ -48,12 +50,26 @@ impl Rules {
 #[wasm_bindgen]
 pub struct Grid(DynamicSizeGrid2D);
 
+#[derive(Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct Dimensions {
+    pub width: usize,
+    pub height: usize,
+}
+
 #[wasm_bindgen]
 impl Grid {
     #[wasm_bindgen(constructor)]
     pub fn new(rules: Rules, width: usize, height: usize) -> Self {
         let inner = DynamicSizeGrid2D::new(width, height, rules.0);
         Self(inner)
+    }
+
+    pub fn get_dimensions(&self) -> Dimensions {
+        Dimensions {
+            width: self.0.width,
+            height: self.0.height,
+        }
     }
 
     pub fn dump(&self) -> Vec<Tile> {

@@ -1,6 +1,10 @@
-import initSync, { Grid, Rules, Tile } from "aaltofunktionromautus";
+import initSync, { Grid, Rules, Dimensions, Tile } from "aaltofunktionromautus";
 
 console.log("Worker loaded");
+
+export type State = {
+  tiles: Tile[];
+} & Dimensions;
 
 export type WorkerRequest =
   | {
@@ -16,7 +20,7 @@ export type WorkerRequest =
     };
 
 export type WorkerResponse = {
-  tiles: Tile[];
+  state: State;
 } & (
   | {
       type: "state_update";
@@ -35,11 +39,21 @@ async function reset() {
     console.info("Worker loaded wasm!");
   }
   const rules = Rules.terrain();
+  console.debug("Rules loaded");
   const g = new Grid(rules, 30, 30);
+  console.debug("Grid created");
   return g;
 }
 
 let grid: Grid;
+function state(): State {
+  const dimensions = grid.get_dimensions();
+  const tiles = grid.dump();
+  return {
+    ...dimensions,
+    tiles,
+  };
+}
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   // console.log("Worker got message", e.data);
 
@@ -51,7 +65,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     grid = await reset();
     const resp: WorkerResponse = {
       type: "state_update",
-      tiles: grid.dump(),
+      state: state(),
     };
     self.postMessage(resp);
   } else if (e.data.type === "tick") {
@@ -70,7 +84,7 @@ async function tick(data: WorkerRequest) {
   grid.tick();
   const resp: WorkerResponse = {
     type: "state_update",
-    tiles: grid.dump(),
+    state: state(),
   };
   self.postMessage(resp);
 }
@@ -82,7 +96,7 @@ async function collapse(data: WorkerRequest) {
   grid.collapse(data.x, data.y);
   const resp: WorkerResponse = {
     type: "state_update",
-    tiles: grid.dump(),
+    state: state(),
   };
   self.postMessage(resp);
 }

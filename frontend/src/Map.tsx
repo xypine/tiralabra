@@ -23,7 +23,7 @@ const Map: Component<{
     <div
       style={{
         "--unit": "min(1vw, 1vh)",
-        "--target-area": "calc(var(--unit) * 80)",
+        "--target-area": "calc(var(--unit) * 85)",
         "--w": width(),
         "--h": height(),
         "--tile-w": "calc(var(--target-area) / var(--w))",
