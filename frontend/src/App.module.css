@@ -11,18 +11,16 @@
 
 .header {
   min-height: 100vh;
-  width: fit-content;
-  max-width: 100vw;
-  margin-inline: auto;
-  overflow-x: auto;
-  padding-inline: 4rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
   gap: 1rem;
+  width: 100%;
 }
 
 .link {
