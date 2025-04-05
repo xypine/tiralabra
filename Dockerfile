@@ -15,7 +15,7 @@ RUN corepack enable
 ENV CI=1
 COPY ./frontend/ /app
 COPY --from=rust /app/frontend/pkg /app/pkg
-COPY --from=rust /app/frontend/public /app/pkg
+COPY --from=rust /app/frontend/public /app/public
 WORKDIR /app
 
 FROM base AS prod-deps
