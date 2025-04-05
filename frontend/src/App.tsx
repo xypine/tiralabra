@@ -5,7 +5,7 @@ import { Component, createMemo, createSignal } from "solid-js";
 
 const MAX = 100;
 const MIN = 3;
-const DEFAULT = 4;
+const DEFAULT = 30;
 
 const App: Component = () => {
   const [size, setSize] = createSignal<number>(DEFAULT);
