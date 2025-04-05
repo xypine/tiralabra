@@ -152,8 +152,13 @@ const Solver: Component<{ dimensions: Accessor<Dimensions> }> = ({
         >
           toggle tick
         </button>
-        <button onClick={() => run()}>complete</button>
-        <button onClick={() => reset()}>reset</button>
+        <fieldset
+          style={{ display: "contents" }}
+          disabled={tickActive() || waitingForWorker()}
+        >
+          <button onClick={() => run()}>complete</button>
+          <button onClick={() => reset()}>reset</button>
+        </fieldset>
       </div>
     </div>
   );

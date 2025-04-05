@@ -18,7 +18,6 @@
     "vite-plugin-wasm": "^3.4.1"
   },
   "dependencies": {
-    "@solid-primitives/keyed": "^1.5.0",
     "aaltofunktionromautus": "file:./pkg",
     "solid-js": "^1.9.5"
   }
