@@ -1,3 +1,7 @@
+//! Generic interfaces that the WFC algorithm is based upon
+//!
+//! Quite useful, as they allow it to work with multiple backing Grid or Tile implementations
+
 pub mod wasm;
 
 use rand::Rng;
@@ -45,13 +49,17 @@ pub trait TileInterface<State, TCoords> {
     fn collapse(&mut self, value: Option<State>) -> Option<State>;
 }
 
+/// Dimension-agnostic Location
 pub trait Location<const DIMENSIONS: usize> {}
+
+/// Dimension-agnostic direction that can be mirrored
+///
+/// used for finding neighbours of tiles
 pub trait Direction<const COUNT: usize>: Hash + Eq {
     fn mirror(self) -> Self;
 }
 
-/// A grid contains cells
-/// the interface is dimension agnostic
+/// Dimension-agnostic container for tiles
 pub trait GridInterface<
     const NEIGHBOURS_PER_TILE: usize,
     TState,
@@ -60,27 +68,38 @@ pub trait GridInterface<
     T: TileInterface<TState, TPosition>,
 >
 {
+    /// Useful for visuals, might not be most performant
     fn image(&self) -> HashMap<TPosition, T>;
+
+    /// Returns a the requested tile if `location` falls inside the bounds of the grid
     fn get_tile(&self, location: TPosition) -> Option<T>;
+
+    /// Returns an array of locations neighbouring the tile, each can be None if it falls outside
+    /// the grid
     fn get_neighbours(
         &self,
         location: TPosition,
     ) -> [(TDirection, Option<TPosition>); NEIGHBOURS_PER_TILE];
+
+    /// Returns an array of the tile's neighbours. Each can be none if the tile has no neighbour in
+    /// that direction.
     fn get_neighbour_tiles(
         &self,
         location: TPosition,
     ) -> [(TDirection, Option<T>); NEIGHBOURS_PER_TILE];
 
+    /// Returns the position of the tile in the grid with the lowest "Entropy"
     fn get_lowest_entropy_position(&mut self) -> Option<TPosition>;
 
     /// Fetches the tile at the given location and gives you mutable access to it
     fn with_tile<R, F: Fn(&mut T) -> R>(&mut self, location: TPosition, f: F) -> Option<R>;
 
+    /// Returns the rules associated with the grid. A grid must know the rules to initialize tiles
+    /// correctly.
     fn get_rules(&self) -> RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
 }
 
 use serde::Serialize;
-
 /// Used when the algorithm has to return early for some reason
 #[derive(Debug, Clone, Copy, thiserror::Error, Serialize)]
 pub enum WaveFunctionCollapseInterruption<TPosition> {
@@ -93,6 +112,7 @@ pub enum WaveFunctionCollapseInterruption<TPosition> {
     MaxIterationsReached,
 }
 
+/// Used for tracking which tiles will need to be visisted during propagation
 #[derive(Debug)]
 pub struct PropagateQueueEntry<TPosition> {
     /// Which neighbour was updated to prompt the need for propagation
@@ -102,6 +122,7 @@ pub struct PropagateQueueEntry<TPosition> {
 }
 
 pub type TickResult<TPosition> = Result<(), WaveFunctionCollapseInterruption<TPosition>>;
+
 pub trait WaveFunctionCollapse<TPosition, TValue> {
     /// Forces a tile at the given position into one of it's possible states.
     /// If no value is provided, on is picked randomly.

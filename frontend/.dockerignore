@@ -1,1 +1,3 @@
 node_modules
+public/docs/
+!public/docs/index.html

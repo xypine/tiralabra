@@ -4,6 +4,7 @@ import topLevelAwait from "vite-plugin-top-level-await";
 import solidPlugin from "vite-plugin-solid";
 
 export default defineConfig({
+  publicDir: "public",
   plugins: [wasm(), topLevelAwait(), solidPlugin()],
   optimizeDeps: {
     exclude: ["aaltofunktionromautus"],

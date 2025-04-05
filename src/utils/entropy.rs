@@ -1,3 +1,5 @@
+//! Utilities for handling tile "entropy"
+
 use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};

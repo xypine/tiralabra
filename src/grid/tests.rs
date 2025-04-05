@@ -1,3 +1,5 @@
+//! Common test helpers for grid-related tests
+
 use std::collections::HashSet;
 
 use crate::{

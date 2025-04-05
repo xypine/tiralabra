@@ -1,3 +1,9 @@
+//! A Grid which size is known at compile-time
+//!
+//! Not very practical for most applications (where the size of the grid _may_ be determined at
+//! runtime). This was the initial version used for testing and reasoning. It might have a bit
+//! better performance when compared to a dynamically allocated version.
+
 use std::collections::{BinaryHeap, HashMap};
 
 use crate::{
@@ -13,9 +19,9 @@ use crate::{
 pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
     pub rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
     tiles: [[Tile; H]; W],
-    // Priority queue based on tile entropy
+    /// Priority queue based on tile entropy
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
-    // Used to invalidate entries in the entropy_heap
+    /// Used to invalidate entries in the entropy_heap
     entropy_invalidation_matrix: [[usize; H]; W],
 }
 impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
@@ -115,23 +121,26 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         if let Some(candidate) = self.entropy_heap.peek() {
             let current_version =
                 self.entropy_invalidation_matrix[candidate.location.x][candidate.location.y];
+            // My implementation for invalidating entries in the entropy heap requires some
+            // extra work.
+            // Instead of removing entries from the heap when new versions come in, we ignore them
+            // at access time
             if candidate.version < current_version {
-                //println!(
-                //    "candidate {:?} was outdated (latest {current_version})",
-                //    candidate
-                //);
                 let _ = self.entropy_heap.pop();
+                // this means that the access call can be recursive - at worst we need to scan and
+                // discard the entire heap
                 return self.get_lowest_entropy_position();
             }
-            // println!("PICKED {:?}", candidate);
             return Some(candidate.location);
         }
         None
     }
 
     fn with_tile<R, F: Fn(&mut Tile) -> R>(&mut self, location: Location2D, f: F) -> Option<R> {
+        // give the caller mutable access to a copied version of the tile
         let mut mutable_copy = self.get_tile(location)?;
         let result = f(&mut mutable_copy);
+        // update the actual tile, updating the entropy heap if needed
         self.update_tile(location, mutable_copy)?;
         Some(result)
     }

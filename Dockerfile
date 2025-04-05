@@ -1,7 +1,8 @@
-FROM clux/muslrust:nightly AS wasm
+FROM clux/muslrust:nightly AS rust
 WORKDIR /app
-RUN cargo install wasm-pack
-RUN cargo install wasm-bindgen-cli
+RUN cargo install cargo-binstall
+RUN cargo binstall wasm-pack
+RUN cargo binstall wasm-bindgen-cli
 COPY . .
 RUN ./build_wasm.sh
 
@@ -13,7 +14,8 @@ ENV HOST=0.0.0.0
 RUN corepack enable
 ENV CI=1
 COPY ./frontend/ /app
-COPY --from=wasm /app/frontend/pkg /app/pkg
+COPY --from=rust /app/frontend/pkg /app/pkg
+COPY --from=rust /app/frontend/public /app/pkg
 WORKDIR /app
 
 FROM base AS prod-deps

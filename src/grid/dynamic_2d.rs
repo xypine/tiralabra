@@ -1,3 +1,6 @@
+//! A Grid that can be initialized at any size
+//!
+
 use std::collections::{BinaryHeap, HashMap};
 
 use serde::{Deserialize, Serialize};
@@ -20,15 +23,18 @@ pub struct DynamicSizeGrid2D {
     pub rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
     pub width: usize,
     pub height: usize,
+    // A one dimensional array is used for potentionally better performance
+    // (cache locality, fewer bounds checks - if enabled)
     tiles: Vec<Tile>,
-    // Priority queue based on tile entropy
+    /// Priority queue based on tile entropy
     #[tsify(type = "any")]
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
-    // Used to invalidate entries in the entropy_heap
+    /// Used to invalidate entries in the entropy_heap
     entropy_invalidation_matrix: Vec<usize>,
 }
 
 impl DynamicSizeGrid2D {
+    /// Updates a tile at the given location and it's entry in the entropy heap
     fn update_tile(&mut self, location: Location2D, state: Tile) -> Option<()> {
         let current_state = self.get_tile(location)?;
 
@@ -44,6 +50,10 @@ impl DynamicSizeGrid2D {
         Some(())
     }
 
+    /// Calculates an entropy for the tile at the given location
+    ///
+    /// If the value has changed the last time, the current entry is invalidated and a new one is
+    /// inserted
     #[inline]
     fn update_tile_entropy(&mut self, location: Location2D) {
         let matrix_index = self.location_to_index(location);
@@ -63,6 +73,7 @@ impl DynamicSizeGrid2D {
         }
     }
 
+    /// Returns a copy of all tiles in the grid
     pub fn dump(&self) -> Vec<Tile> {
         self.tiles.clone()
     }
@@ -94,6 +105,7 @@ impl DynamicSizeGrid2D {
         new
     }
 
+    /// Using a 1D array for storing 2D locations requires a bit of additional math
     #[inline]
     fn index_to_location(&self, i: usize) -> Location2D {
         let x = i % self.width;
@@ -101,12 +113,14 @@ impl DynamicSizeGrid2D {
         Location2D { x, y }
     }
 
+    /// Using a 1D array for storing 2D locations requires a bit of additional math
     #[inline]
     fn location_to_index(&self, location: Location2D) -> usize {
         location.y * self.width + location.x
     }
 }
 
+// See `GridInterface` for further documentation
 impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeGrid2D {
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {
         let mut map = HashMap::new();
@@ -118,11 +132,12 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
     }
 
     fn get_tile(&self, location: Location2D) -> Option<Tile> {
-        let index = location.y * self.width + location.x;
+        let index = self.location_to_index(location);
         self.tiles.get(index).cloned()
     }
 
     fn get_neighbours(&self, location: Location2D) -> [(Direction2D, Option<Location2D>); 4] {
+        // index is 0..4
         std::array::from_fn(|index| {
             let direction = Direction2D::try_from(index).unwrap();
             let direction_delta = Delta2D::from(direction);
@@ -143,23 +158,26 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         if let Some(candidate) = self.entropy_heap.peek() {
             let candidate_index = self.location_to_index(candidate.location);
             let current_version = self.entropy_invalidation_matrix[candidate_index];
+            // My implementation for invalidating entries in the entropy heap requires some
+            // extra work.
+            // Instead of removing entries from the heap when new versions come in, we ignore them
+            // at access time
             if candidate.version < current_version {
-                //println!(
-                //    "candidate {:?} was outdated (latest {current_version})",
-                //    candidate
-                //);
                 let _ = self.entropy_heap.pop();
+                // this means that the access call can be recursive - at worst we need to scan and
+                // discard the entire heap
                 return self.get_lowest_entropy_position();
             }
-            // println!("PICKED {:?}", candidate);
             return Some(candidate.location);
         }
         None
     }
 
     fn with_tile<R, F: Fn(&mut Tile) -> R>(&mut self, location: Location2D, f: F) -> Option<R> {
+        // give the caller mutable access to a copied version of the tile
         let mut mutable_copy = self.get_tile(location)?;
         let result = f(&mut mutable_copy);
+        // update the actual tile, updating the entropy heap if needed
         self.update_tile(location, mutable_copy)?;
         Some(result)
     }

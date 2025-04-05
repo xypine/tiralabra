@@ -1,3 +1,5 @@
+//! What tiles are allowed to exists and where
+
 use std::{
     collections::{BTreeSet, HashSet},
     hash::Hash,
@@ -12,10 +14,13 @@ use crate::{
     utils::space::{Direction2D, NEIGHBOUR_COUNT_2D},
 };
 
+/// Describes the tiles that can exist in the output and which ones can be next one another
 #[derive(Debug, Clone, Tsify, Serialize, Deserialize)]
 pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     pub possible: BTreeSet<TileState>,
-    // direction agnostic, also contains mirrored pairs
+    /// If (A, RIGHT, B) exists:
+    /// - B is allowed on the right side of A
+    /// - A is allowed on the left side of B
     pub allowed: HashSet<(TileState, TDirection, TileState)>,
 }
 
@@ -40,6 +45,8 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
         }
     }
 
+    /// Removes possible tile states for `target`,
+    /// given that it has a neighbour `source` in `direction`
     pub fn check<TCoords, T: TileInterface<TileState, TCoords>>(
         &self,
         target: &T,
@@ -64,6 +71,7 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
 pub mod samples {
     use super::*;
 
+    /// Allows a checker or "chess board" pattern, with alternating white and black tiles
     pub mod checkers {
         use super::*;
         pub const STATE_BLACK: u64 = 0;
@@ -80,6 +88,7 @@ pub mod samples {
         }
     }
 
+    /// Three colors alternating diagonally
     pub mod stripes {
         use super::*;
         pub const STATE_ONE: u64 = 2;
@@ -100,6 +109,9 @@ pub mod samples {
         }
     }
 
+    /// Sea -> Shore -> Land
+    /// directions do not matter, but the order must be as above
+    /// "Sea" should never end up next to "Land"
     pub mod terrain_simple {
         use super::*;
         const STATE_SEA: u64 = 2;
@@ -135,6 +147,8 @@ pub mod samples {
         }
     }
 
+    /// Deepest sea -> Deep sea -> Sea -> Shore -> Land -> Forest -> Deep forest
+    /// directions do not matter, but the order must be as above
     pub mod terrain {
         use super::*;
         const STATE_DEEP_SEA2: u64 = 0;

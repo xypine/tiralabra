@@ -1,4 +1,5 @@
-//! Provides an interface and structures that can be used from Web Assembly
+//! Interface and structures that can be used in the browser through Web Assembly
+//! TypeScript types are automatically generated using Tsify
 
 use std::collections::{BTreeSet, HashSet};
 
