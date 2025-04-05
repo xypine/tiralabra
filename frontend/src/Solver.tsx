@@ -7,7 +7,12 @@ import {
   type Component,
 } from "solid-js";
 import type { Location2D, Tile } from "aaltofunktionromautus";
-import type { State, WorkerRequest, WorkerResponse } from "./worker";
+import type {
+  InbuiltRuleSet,
+  State,
+  WorkerRequest,
+  WorkerResponse,
+} from "./worker";
 import Worker from "./worker?worker";
 import Map from "./Map";
 import { Dimensions } from "../pkg/aaltofunktionromautus";
@@ -18,9 +23,10 @@ function locationToIndex(location: Location2D, width: number): number {
   return location.y * width + location.x;
 }
 
-const Solver: Component<{ dimensions: Accessor<Dimensions> }> = ({
-  dimensions,
-}) => {
+const Solver: Component<{
+  dimensions: Accessor<Dimensions>;
+  rules: Accessor<InbuiltRuleSet>;
+}> = ({ dimensions, rules }) => {
   const [state, setState] = createSignal<State | null>(null);
   const [tickActive, setTickActive] = createSignal(false);
   const tooLargeForTick = createMemo(() => {
@@ -60,7 +66,7 @@ const Solver: Component<{ dimensions: Accessor<Dimensions> }> = ({
   createEffect(() => {
     console.debug("init");
     reset();
-    createT();
+    createT(8);
   });
 
   const tiles = () => {
@@ -84,17 +90,22 @@ const Solver: Component<{ dimensions: Accessor<Dimensions> }> = ({
     postMessage({
       type: "reset",
       dimensions: dimensions(),
+      rules: rules(),
     });
     setTickActive(activate);
   }
   function tick() {
     postMessage({
       type: "tick",
+      dimensions: dimensions(),
+      rules: rules(),
     });
   }
   function collapse(x: number, y: number) {
     postMessage({
       type: "collapse",
+      dimensions: dimensions(),
+      rules: rules(),
       x,
       y,
     });
@@ -103,6 +114,8 @@ const Solver: Component<{ dimensions: Accessor<Dimensions> }> = ({
     setTickActive(false);
     postMessage({
       type: "run",
+      dimensions: dimensions(),
+      rules: rules(),
     });
   }
 

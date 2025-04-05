@@ -80,23 +80,66 @@ pub mod samples {
         }
     }
 
+    pub mod terrain_simple {
+        use super::*;
+        const STATE_SEA: u64 = 2;
+        const STATE_SHORE: u64 = 3;
+        const STATE_LAND: u64 = 4;
+        pub fn rules() -> RuleSet2D {
+            let possible = BTreeSet::from([STATE_SEA, STATE_SHORE, STATE_LAND]);
+            let allowed = HashSet::from([
+                // identity rules, allow x next to x
+                (STATE_SEA, Direction2D::UP, STATE_SEA),
+                (STATE_SEA, Direction2D::RIGHT, STATE_SEA),
+                (STATE_SEA, Direction2D::DOWN, STATE_SEA),
+                (STATE_SEA, Direction2D::LEFT, STATE_SEA),
+                (STATE_SHORE, Direction2D::UP, STATE_SHORE),
+                (STATE_SHORE, Direction2D::RIGHT, STATE_SHORE),
+                (STATE_SHORE, Direction2D::DOWN, STATE_SHORE),
+                (STATE_SHORE, Direction2D::LEFT, STATE_SHORE),
+                (STATE_LAND, Direction2D::UP, STATE_LAND),
+                (STATE_LAND, Direction2D::RIGHT, STATE_LAND),
+                (STATE_LAND, Direction2D::DOWN, STATE_LAND),
+                (STATE_LAND, Direction2D::LEFT, STATE_LAND),
+                // adjacency rules, allow SEA -> SHORE -> LAND
+                (STATE_SEA, Direction2D::UP, STATE_SHORE),
+                (STATE_SEA, Direction2D::RIGHT, STATE_SHORE),
+                (STATE_SEA, Direction2D::DOWN, STATE_SHORE),
+                (STATE_SEA, Direction2D::LEFT, STATE_SHORE),
+                (STATE_SHORE, Direction2D::UP, STATE_LAND),
+                (STATE_SHORE, Direction2D::RIGHT, STATE_LAND),
+                (STATE_SHORE, Direction2D::DOWN, STATE_LAND),
+                (STATE_SHORE, Direction2D::LEFT, STATE_LAND),
+            ]);
+            RuleSet::new(possible, allowed)
+        }
+    }
+
     pub mod terrain {
         use super::*;
-        const STATE_DEEP_SEA: u64 = 0;
-        const STATE_SEA: u64 = 1;
-        const STATE_SHORE: u64 = 2;
-        const STATE_LAND: u64 = 3;
-        const STATE_FOREST: u64 = 4;
+        const STATE_DEEP_SEA2: u64 = 0;
+        const STATE_DEEP_SEA: u64 = 1;
+        const STATE_SEA: u64 = 2;
+        const STATE_SHORE: u64 = 3;
+        const STATE_LAND: u64 = 4;
+        const STATE_FOREST: u64 = 5;
+        const STATE_FOREST2: u64 = 6;
         pub fn rules() -> RuleSet2D {
             let possible = BTreeSet::from([
+                STATE_DEEP_SEA2,
                 STATE_DEEP_SEA,
                 STATE_SEA,
                 STATE_SHORE,
                 STATE_LAND,
                 STATE_FOREST,
+                STATE_FOREST2,
             ]);
             let allowed = HashSet::from([
                 // identity rules, allow x next to x
+                (STATE_DEEP_SEA2, Direction2D::UP, STATE_DEEP_SEA2),
+                (STATE_DEEP_SEA2, Direction2D::RIGHT, STATE_DEEP_SEA2),
+                (STATE_DEEP_SEA2, Direction2D::DOWN, STATE_DEEP_SEA2),
+                (STATE_DEEP_SEA2, Direction2D::LEFT, STATE_DEEP_SEA2),
                 (STATE_DEEP_SEA, Direction2D::UP, STATE_DEEP_SEA),
                 (STATE_DEEP_SEA, Direction2D::RIGHT, STATE_DEEP_SEA),
                 (STATE_DEEP_SEA, Direction2D::DOWN, STATE_DEEP_SEA),
@@ -117,7 +160,15 @@ pub mod samples {
                 (STATE_FOREST, Direction2D::RIGHT, STATE_FOREST),
                 (STATE_FOREST, Direction2D::DOWN, STATE_FOREST),
                 (STATE_FOREST, Direction2D::LEFT, STATE_FOREST),
+                (STATE_FOREST2, Direction2D::UP, STATE_FOREST2),
+                (STATE_FOREST2, Direction2D::RIGHT, STATE_FOREST2),
+                (STATE_FOREST2, Direction2D::DOWN, STATE_FOREST2),
+                (STATE_FOREST2, Direction2D::LEFT, STATE_FOREST2),
                 // adjacency rules, allow DEEP_SEA -> SEA -> SHORE -> LAND -> FOREST
+                (STATE_DEEP_SEA2, Direction2D::UP, STATE_DEEP_SEA),
+                (STATE_DEEP_SEA2, Direction2D::RIGHT, STATE_DEEP_SEA),
+                (STATE_DEEP_SEA2, Direction2D::DOWN, STATE_DEEP_SEA),
+                (STATE_DEEP_SEA2, Direction2D::LEFT, STATE_DEEP_SEA),
                 (STATE_DEEP_SEA, Direction2D::UP, STATE_SEA),
                 (STATE_DEEP_SEA, Direction2D::RIGHT, STATE_SEA),
                 (STATE_DEEP_SEA, Direction2D::DOWN, STATE_SEA),
@@ -134,6 +185,10 @@ pub mod samples {
                 (STATE_LAND, Direction2D::RIGHT, STATE_FOREST),
                 (STATE_LAND, Direction2D::DOWN, STATE_FOREST),
                 (STATE_LAND, Direction2D::LEFT, STATE_FOREST),
+                (STATE_FOREST, Direction2D::UP, STATE_FOREST2),
+                (STATE_FOREST, Direction2D::RIGHT, STATE_FOREST2),
+                (STATE_FOREST, Direction2D::DOWN, STATE_FOREST2),
+                (STATE_FOREST, Direction2D::LEFT, STATE_FOREST2),
             ]);
             RuleSet::new(possible, allowed)
         }

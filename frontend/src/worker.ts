@@ -6,22 +6,35 @@ export type State = {
   tiles: Tile[];
 } & Dimensions;
 
-export type WorkerRequest =
-  | {
-      type: "reset";
-      dimensions?: Dimensions;
-    }
-  | {
-      type: "tick";
-    }
-  | {
-      type: "run";
-    }
-  | {
-      type: "collapse";
-      x: number;
-      y: number;
-    };
+export const INBUILT_RULE_SETS = [
+  "terrain",
+  "terrain_simple",
+  "checkers",
+] as const;
+export type InbuiltRuleSet = (typeof INBUILT_RULE_SETS)[number];
+
+export type BaseSettings = {
+  dimensions?: Dimensions;
+  rules: InbuiltRuleSet;
+};
+
+export type WorkerRequest = BaseSettings &
+  (
+    | {
+        type: "reset";
+      }
+    | {
+        type: "tick";
+      }
+    | {
+        type: "run";
+      }
+    | {
+        type: "collapse";
+        x: number;
+        y: number;
+      }
+  );
 
 export type WorkerResponse = {
   state: State;
@@ -36,13 +49,24 @@ export type WorkerResponse = {
 );
 
 let ready = false;
-async function reset(dimensions?: Dimensions) {
+async function reset(dimensions?: Dimensions, ruleset?: InbuiltRuleSet) {
   if (!ready) {
     await initSync();
     ready = true;
     console.info("Worker loaded wasm!");
   }
-  const rules = Rules.terrain();
+  let rules: Rules = Rules.terrain();
+  switch (ruleset) {
+    case "terrain":
+      rules = Rules.terrain();
+      break;
+    case "terrain_simple":
+      rules = Rules.terrain_simple();
+      break;
+    case "checkers":
+      rules = Rules.checkers();
+      break;
+  }
   console.debug("Rules loaded");
   if (grid && !dimensions) {
     dimensions = grid.get_dimensions();
@@ -65,18 +89,18 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   // console.log("Worker got message", e.data);
 
   if (grid === undefined) {
-    grid = await reset();
+    grid = await reset(e.data.dimensions, e.data.rules);
   }
   if (grid.is_finished()) {
     if (e.data.type === "tick") {
       console.info("persiting image for a bit");
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    grid = await reset();
+    grid = await reset(e.data.dimensions, e.data.rules);
   }
 
   if (e.data.type === "reset") {
-    grid = await reset(e.data.dimensions);
+    grid = await reset(e.data.dimensions, e.data.rules);
     const resp: WorkerResponse = {
       type: "state_update",
       state: state(),

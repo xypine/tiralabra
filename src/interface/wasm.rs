@@ -45,6 +45,11 @@ impl Rules {
         let inner = crate::rules::samples::terrain::rules();
         Self(inner)
     }
+
+    pub fn terrain_simple() -> Self {
+        let inner = crate::rules::samples::terrain_simple::rules();
+        Self(inner)
+    }
 }
 
 #[wasm_bindgen]
