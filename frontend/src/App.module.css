@@ -22,7 +22,7 @@
   align-items: center;
   font-size: calc(10px + 2vmin);
   color: white;
-  /* gap: 1.25rem; */
+  gap: 1rem;
 }
 
 .link {

@@ -9,9 +9,13 @@ export type State = {
 export type WorkerRequest =
   | {
       type: "reset";
+      dimensions?: Dimensions;
     }
   | {
       type: "tick";
+    }
+  | {
+      type: "run";
     }
   | {
       type: "collapse";
@@ -32,7 +36,7 @@ export type WorkerResponse = {
 );
 
 let ready = false;
-async function reset() {
+async function reset(dimensions?: Dimensions) {
   if (!ready) {
     await initSync();
     ready = true;
@@ -40,7 +44,10 @@ async function reset() {
   }
   const rules = Rules.terrain();
   console.debug("Rules loaded");
-  const g = new Grid(rules, 30, 30);
+  if (grid && !dimensions) {
+    dimensions = grid.get_dimensions();
+  }
+  const g = new Grid(rules, dimensions?.width ?? 30, dimensions?.height ?? 30);
   console.debug("Grid created");
   return g;
 }
@@ -60,9 +67,16 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   if (grid === undefined) {
     grid = await reset();
   }
+  if (grid.is_finished()) {
+    if (e.data.type === "tick") {
+      console.info("persiting image for a bit");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    grid = await reset();
+  }
 
   if (e.data.type === "reset") {
-    grid = await reset();
+    grid = await reset(e.data.dimensions);
     const resp: WorkerResponse = {
       type: "state_update",
       state: state(),
@@ -70,6 +84,8 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     self.postMessage(resp);
   } else if (e.data.type === "tick") {
     await tick(e.data);
+  } else if (e.data.type === "run") {
+    await run(e.data);
   } else if (e.data.type === "collapse") {
     await collapse(e.data);
   } else {
@@ -82,6 +98,19 @@ async function tick(data: WorkerRequest) {
     throw new Error("Unexpected message type");
   }
   grid.tick();
+  const resp: WorkerResponse = {
+    type: "state_update",
+    state: state(),
+  };
+  self.postMessage(resp);
+}
+
+async function run(data: WorkerRequest) {
+  if (data.type !== "run") {
+    throw new Error("Unexpected message type");
+  }
+  const dimensions = grid.get_dimensions();
+  grid.run(dimensions.width * dimensions.height);
   const resp: WorkerResponse = {
     type: "state_update",
     state: state(),

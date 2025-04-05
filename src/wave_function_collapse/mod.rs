@@ -44,51 +44,54 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
         &mut self,
         mut queue: VecDeque<crate::interface::PropagateQueueEntry<Location2D>>,
     ) -> crate::interface::TickResult<Location2D> {
-        match queue.pop_front() {
-            None => Ok(()),
-            Some(queue_entry) => {
-                let delta = queue_entry
-                    .target
-                    .delta(queue_entry.source)
-                    .expect("converting propagate location to delta");
-                let direction =
-                    Direction2D::try_from(delta).expect("converting propagate delta to direction");
-                // println!("{queue_entry:?} {direction:?}");
-                let source = self
-                    .get_tile(queue_entry.source)
-                    .expect("getting propagation source");
-                let rules = self.get_rules().clone();
-                let was_modified = self
-                    .with_tile(queue_entry.target, |target| {
-                        if target.has_collapsed() {
-                            return false;
-                        }
-                        let unmodified_length = target.possible_states_ref().count();
-                        let checked_states = rules.check(target, &source, direction);
-                        let modified_length = checked_states.len();
-                        let was_modified = unmodified_length != modified_length;
-                        if was_modified {
-                            target.set_possible_states(checked_states);
-                        }
-                        was_modified
-                    })
-                    .expect("updating tile during propagation");
-                if was_modified {
-                    let neighbours = self.get_neighbours(queue_entry.target);
-                    for (_direction, npos) in neighbours {
-                        if let Some(neighbour_position) = npos {
-                            queue.push_back(PropagateQueueEntry {
-                                source: queue_entry.target,
-                                target: neighbour_position,
-                            });
-                        }
+        while let Some(queue_entry) = queue.pop_front() {
+            let delta = queue_entry
+                .target
+                .delta(queue_entry.source)
+                .expect("converting propagate location to delta");
+            let direction =
+                Direction2D::try_from(delta).expect("converting propagate delta to direction");
+            // println!("{queue_entry:?} {direction:?}");
+            let source = self
+                .get_tile(queue_entry.source)
+                .expect("getting propagation source");
+            let rules = self.get_rules().clone();
+            let was_modified = self
+                .with_tile(queue_entry.target, |target| {
+                    if target.has_collapsed() {
+                        return false;
+                    }
+                    let unmodified_length = target.possible_states_ref().count();
+                    let checked_states = rules.check(target, &source, direction);
+                    let modified_length = checked_states.len();
+                    let was_modified = unmodified_length != modified_length;
+                    if was_modified {
+                        target.set_possible_states(checked_states);
+                    }
+                    was_modified
+                })
+                .expect("updating tile during propagation");
+            if was_modified {
+                let neighbours = self.get_neighbours(queue_entry.target);
+                for (_direction, npos) in neighbours {
+                    if let Some(neighbour_position) = npos {
+                        queue.push_back(PropagateQueueEntry {
+                            source: queue_entry.target,
+                            target: neighbour_position,
+                        });
                     }
                 }
-                self.propagate(queue)?;
-
-                Ok(())
             }
+            // self.propagate(queue)?;
+            //
+            // Ok(())
         }
+        // match queue.pop_front() {
+        //     None => Ok(()),
+        //     Some(queue_entry) => {
+        //     }
+        // }
+        Ok(())
     }
 
     fn tick(&mut self) -> crate::interface::TickResult<Location2D> {

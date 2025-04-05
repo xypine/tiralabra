@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
-    interface::WaveFunctionCollapse,
+    interface::{TileInterface, WaveFunctionCollapse},
     rules::RuleSet2D,
     tile::{Tile, TileState},
     utils::space::{Direction2D, Location2D},
@@ -76,6 +76,14 @@ impl Grid {
         self.0.dump()
     }
 
+    pub fn is_finished(&self) -> bool {
+        let uncollapsed_tile_exists = self
+            .dump()
+            .into_iter()
+            .any(|t| t.possible_states_ref().count() != 1);
+        !uncollapsed_tile_exists
+    }
+
     pub fn collapse(&mut self, x: usize, y: usize) -> Option<bool> {
         let result = self.0.collapse(Location2D { x, y });
         let done = match result {
@@ -88,6 +96,16 @@ impl Grid {
 
     pub fn tick(&mut self) -> Option<bool> {
         let result = self.0.tick();
+        let done = match result {
+            Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
+            Err(_) => return None,
+            Ok(_) => false,
+        };
+        Some(done)
+    }
+
+    pub fn run(&mut self, max_iter: usize) -> Option<bool> {
+        let result = self.0.run(max_iter);
         let done = match result {
             Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,

@@ -1,7 +1,7 @@
 .tile-container {
   margin: 0;
-  width: var(--tile-w);
-  height: var(--tile-h);
+  width: round(up, var(--tile-w), 0.25px);
+  height: round(up, var(--tile-h), 0.25px);
 
   font-size: 1rem;
 

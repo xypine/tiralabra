@@ -1,4 +1,5 @@
 import {
+  Accessor,
   createEffect,
   createMemo,
   createSignal,
@@ -9,6 +10,7 @@ import type { Location2D, Tile } from "aaltofunktionromautus";
 import type { State, WorkerRequest, WorkerResponse } from "./worker";
 import Worker from "./worker?worker";
 import Map from "./Map";
+import { Dimensions } from "../pkg/aaltofunktionromautus";
 
 export type VisualGrid = Map<Location2D, Tile>;
 
@@ -16,9 +18,15 @@ function locationToIndex(location: Location2D, width: number): number {
   return location.y * width + location.x;
 }
 
-const Solver: Component = () => {
+const Solver: Component<{ dimensions: Accessor<Dimensions> }> = ({
+  dimensions,
+}) => {
   const [state, setState] = createSignal<State | null>(null);
   const [tickActive, setTickActive] = createSignal(false);
+  const tooLargeForTick = createMemo(() => {
+    const dim = dimensions();
+    return dim.width > 40 || dim.height > 40;
+  });
 
   const [waitingForWorker, setWaitingForWorker] = createSignal(false);
   const worker = createMemo(() => {
@@ -75,6 +83,7 @@ const Solver: Component = () => {
   function reset(activate = false) {
     postMessage({
       type: "reset",
+      dimensions: dimensions(),
     });
     setTickActive(activate);
   }
@@ -84,21 +93,26 @@ const Solver: Component = () => {
     });
   }
   function collapse(x: number, y: number) {
-    setTickActive(false);
     postMessage({
       type: "collapse",
       x,
       y,
     });
   }
+  function run() {
+    setTickActive(false);
+    postMessage({
+      type: "run",
+    });
+  }
 
   let timeout: number | undefined = undefined;
-  function createT() {
-    timeout = setTimeout(t, 8);
+  function createT(delay: number) {
+    timeout = setTimeout(t, delay);
   }
   function t() {
     function next() {
-      createT();
+      createT(8);
     }
     if (!tickActive() || waitingForWorker()) {
       return next();
@@ -106,9 +120,6 @@ const Solver: Component = () => {
     tick();
     return next();
   }
-  // const interval = setInterval(() => {
-  //   tick();
-  // }, 100);
   onCleanup(() => {
     if (timeout !== undefined) {
       clearTimeout(timeout);
@@ -135,9 +146,13 @@ const Solver: Component = () => {
           "align-items": "center",
         }}
       >
-        <button onClick={() => setTickActive(!tickActive())}>
+        <button
+          onClick={() => setTickActive(!tickActive())}
+          disabled={tooLargeForTick()}
+        >
           toggle tick
         </button>
+        <button onClick={() => run()}>complete</button>
         <button onClick={() => reset()}>reset</button>
       </div>
     </div>
