@@ -30,7 +30,7 @@ pub trait TileInterface<State, TCoords> {
         Some(Entropy(entropy + random))
     }
 
-    fn collapse(&mut self) -> Option<State>;
+    fn collapse(&mut self, value: Option<State>) -> Option<State>;
 }
 
 pub trait Location<const DIMENSIONS: usize> {}
@@ -81,11 +81,12 @@ pub struct PropagateQueueEntry<TPosition> {
 }
 
 pub type TickResult<TPosition> = Result<(), WaveFunctionCollapseInterruption<TPosition>>;
-pub trait WaveFunctionCollapse<TPosition> {
+pub trait WaveFunctionCollapse<TPosition, TValue> {
     fn find_lowest_entropy(&mut self) -> Option<TPosition>;
     fn collapse(
         &mut self,
         position: TPosition,
+        value: Option<TValue>,
     ) -> Result<(), WaveFunctionCollapseInterruption<TPosition>>;
     // breadth first
     fn propagate(

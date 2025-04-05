@@ -13,7 +13,7 @@ use crate::{
 };
 
 impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>>
-    WaveFunctionCollapse<Location2D> for T
+    WaveFunctionCollapse<Location2D, TileState> for T
 {
     fn find_lowest_entropy(&mut self) -> Option<Location2D> {
         self.get_lowest_entropy_position()
@@ -22,8 +22,9 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
     fn collapse(
         &mut self,
         position: Location2D,
+        value: Option<TileState>,
     ) -> Result<(), crate::interface::WaveFunctionCollapseInterruption<Location2D>> {
-        self.with_tile(position, |tile| tile.collapse())
+        self.with_tile(position, |tile| tile.collapse(value))
             .flatten()
             .ok_or(WaveFunctionCollapseInterruption::Contradiction(position))?;
 
@@ -99,7 +100,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
             .find_lowest_entropy()
             .ok_or(WaveFunctionCollapseInterruption::Finished::<Location2D>)?;
 
-        self.collapse(lowest_entropy)?;
+        self.collapse(lowest_entropy, None)?;
 
         Ok(())
     }

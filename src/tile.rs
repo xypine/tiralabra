@@ -57,10 +57,15 @@ impl TileInterface<TileState, Location2D> for Tile {
         self.collapsed
     }
 
-    fn collapse(&mut self) -> Option<TileState> {
-        let mut rng = rand::rng();
-        // TODO: Non-uniform sampling
-        let chosen_state = self.possible_states().choose(&mut rng)?;
+    fn collapse(&mut self, value: Option<TileState>) -> Option<TileState> {
+        let chosen_state = match value {
+            Some(value) => value,
+            None => {
+                let mut rng = rand::rng();
+                // TODO: Non-uniform sampling
+                self.possible_states().choose(&mut rng)?
+            }
+        };
 
         self.set_possible_states(BTreeSet::from([chosen_state]));
         Some(chosen_state)

@@ -5,7 +5,7 @@ import { Component, createMemo, createSignal } from "solid-js";
 import { InbuiltRuleSet } from "./worker";
 
 const MAX = 100;
-const MIN = 3;
+const MIN = 2;
 const DEFAULT = 30;
 
 const App: Component = () => {
@@ -47,6 +47,7 @@ const App: Component = () => {
               <option value="terrain">terrain</option>
               <option value="terrain_simple">terrain simple</option>
               <option value="checkers">checkers</option>
+              <option value="stripes">stripes</option>
             </select>
           </label>
           <label

@@ -1,7 +1,7 @@
 use std::collections::{BTreeSet, HashSet};
 
 use aaltofunktionromautus::{
-    grid::{constant_2d::ConstantSizeGrid2D, dynamic_2d::DynamicSizeGrid2D},
+    grid::dynamic_2d::DynamicSizeGrid2D,
     interface::{
         GridInterface, TileInterface, WaveFunctionCollapse, WaveFunctionCollapseInterruption,
     },

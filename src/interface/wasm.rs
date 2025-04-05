@@ -50,6 +50,11 @@ impl Rules {
         let inner = crate::rules::samples::terrain_simple::rules();
         Self(inner)
     }
+
+    pub fn stripes() -> Self {
+        let inner = crate::rules::samples::stripes::rules();
+        Self(inner)
+    }
 }
 
 #[wasm_bindgen]
@@ -89,8 +94,8 @@ impl Grid {
         !uncollapsed_tile_exists
     }
 
-    pub fn collapse(&mut self, x: usize, y: usize) -> Option<bool> {
-        let result = self.0.collapse(Location2D { x, y });
+    pub fn collapse(&mut self, x: usize, y: usize, value: Option<TileState>) -> Option<bool> {
+        let result = self.0.collapse(Location2D { x, y }, value);
         let done = match result {
             Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,

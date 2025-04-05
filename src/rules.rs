@@ -66,8 +66,8 @@ pub mod samples {
 
     pub mod checkers {
         use super::*;
-        const STATE_BLACK: u64 = 0;
-        const STATE_WHITE: u64 = 1;
+        pub const STATE_BLACK: u64 = 0;
+        pub const STATE_WHITE: u64 = 1;
         pub fn rules() -> RuleSet2D {
             let possible = BTreeSet::from([STATE_BLACK, STATE_WHITE]);
             let allowed = HashSet::from([
@@ -75,6 +75,26 @@ pub mod samples {
                 (STATE_BLACK, Direction2D::RIGHT, STATE_WHITE),
                 (STATE_BLACK, Direction2D::DOWN, STATE_WHITE),
                 (STATE_BLACK, Direction2D::LEFT, STATE_WHITE),
+            ]);
+            RuleSet::new(possible, allowed)
+        }
+    }
+
+    pub mod stripes {
+        use super::*;
+        pub const STATE_ONE: u64 = 2;
+        pub const STATE_MIDDLE: u64 = 3;
+        pub const STATE_TWO: u64 = 4;
+        pub fn rules() -> RuleSet2D {
+            let possible = BTreeSet::from([STATE_ONE, STATE_MIDDLE, STATE_TWO]);
+            let allowed = HashSet::from([
+                // adjacency rules, allow ONE on top and left of MIDDLE, TWO on right and bottom
+                (STATE_ONE, Direction2D::DOWN, STATE_MIDDLE),
+                (STATE_ONE, Direction2D::RIGHT, STATE_MIDDLE),
+                (STATE_MIDDLE, Direction2D::DOWN, STATE_TWO),
+                (STATE_MIDDLE, Direction2D::RIGHT, STATE_TWO),
+                (STATE_TWO, Direction2D::DOWN, STATE_ONE),
+                (STATE_TWO, Direction2D::RIGHT, STATE_ONE),
             ]);
             RuleSet::new(possible, allowed)
         }

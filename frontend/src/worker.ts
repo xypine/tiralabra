@@ -10,6 +10,7 @@ export const INBUILT_RULE_SETS = [
   "terrain",
   "terrain_simple",
   "checkers",
+  "stripes",
 ] as const;
 export type InbuiltRuleSet = (typeof INBUILT_RULE_SETS)[number];
 
@@ -65,6 +66,9 @@ async function reset(dimensions?: Dimensions, ruleset?: InbuiltRuleSet) {
       break;
     case "checkers":
       rules = Rules.checkers();
+      break;
+    case "stripes":
+      rules = Rules.stripes();
       break;
   }
   console.debug("Rules loaded");
