@@ -28,8 +28,8 @@ fn debug_print<const W: usize, const H: usize>(
 }
 
 fn main() {
-    const W: usize = 5;
-    const H: usize = 5;
+    const W: usize = 30;
+    const H: usize = 30;
 
     const STATE_DEEP_SEA: u64 = 0;
     const STATE_SEA: u64 = 1;

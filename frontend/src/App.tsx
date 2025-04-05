@@ -1,5 +1,13 @@
-import { createSignal, onCleanup, Show, type Component } from "solid-js";
-import initSync, { Grid, Rules, Location2D, Tile } from "aaltofunktionromautus";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  type Component,
+} from "solid-js";
+import type { Location2D, Tile } from "aaltofunktionromautus";
+import type { WorkerRequest, WorkerResponse } from "./worker";
+import Worker from "./worker?worker";
 import Map from "./Map";
 
 import styles from "./App.module.css";
@@ -14,34 +22,52 @@ function locationToIndex(location: Location2D, width: number): number {
 }
 
 const App: Component = () => {
-  const [wasmReady, setWasmReady] = createSignal(false);
-  const [grid, setGrid] = createSignal<Grid | null>(null);
-  const [tickActive, setTickActive] = createSignal(true);
+  const [map, setMap] = createSignal<Tile[] | null>(null);
+  const [tickActive, setTickActive] = createSignal(false);
 
-  initSync().then(() => {
-    setWasmReady(true);
-    const rules = Rules.terrain();
-    const g = new Grid(rules, W, H);
-    setGrid(g);
+  const [waitingForWorker, setWaitingForWorker] = createSignal(false);
+  const worker = createMemo(() => {
+    return new Worker();
+  });
+  const postMessage = (msg: WorkerRequest) => {
+    setWaitingForWorker(true);
+    worker().postMessage(msg);
+  };
+  createEffect(() => {
+    worker().onmessage = (event) => {
+      let data: WorkerResponse = event.data;
+      let tiles = data.tiles;
+      if (data.type === "tick_update") {
+        const res = data.result;
+        if (res === undefined) {
+          setTickActive(false);
+        }
+      }
+
+      requestAnimationFrame(() => {
+        setMap(tiles);
+        setWaitingForWorker(false);
+      });
+    };
+    worker().onerror = (event) => {
+      throw event.error;
+    };
+  });
+  createEffect(() => {
+    console.debug("init");
+    reset();
+    createT();
   });
 
-  const map = () => {
-    const g = grid();
-    if (!g) {
-      return null;
-    }
-    const img = g.dump();
-    return img;
-  };
   const tiles = () => {
     const m = map();
     if (!m) {
       return null;
     }
     let arr = [];
-    for (let y = -1; y++, y < H; ) {
+    for (let x = -1; x++, x < W; ) {
       let buffer = [];
-      for (let x = -1; x++, x < W; ) {
+      for (let y = -1; y++, y < H; ) {
         const t = m[locationToIndex({ x, y }, W)];
         buffer.push(t);
       }
@@ -50,61 +76,65 @@ const App: Component = () => {
     return arr;
   };
 
+  function reset(activate = false) {
+    postMessage({
+      type: "reset",
+    });
+    setTickActive(activate);
+  }
   function tick() {
-    setTickActive(false);
-    // const id = "tick_" + Math.random();
-    // console.time(id);
-    let g = grid();
-    if (g) {
-      const res = g.tick();
-      if (res) {
-        const rules = Rules.terrain();
-        g = new Grid(rules, W, H);
-      }
-      setGrid(null);
-      setGrid(g);
-      if (res === undefined) {
-        setTickActive(false);
-      } else {
-        setTickActive(true);
-      }
-    }
-    // console.timeEnd(id);
+    postMessage({
+      type: "tick",
+    });
   }
   function collapse(x: number, y: number) {
     setTickActive(false);
-    let g = grid();
-    if (g) {
-      const res = g.collapse(x, y);
-      console.debug(res);
-      setGrid(null);
-      setGrid(g);
-    }
+    postMessage({
+      type: "collapse",
+      x,
+      y,
+    });
   }
 
-  const interval = setInterval(() => {
-    if (!tickActive() || !wasmReady()) {
-      return;
+  let timeout: number | undefined = undefined;
+  function createT() {
+    timeout = setTimeout(t, 16);
+  }
+  function t() {
+    function next() {
+      createT();
+    }
+    if (!tickActive() || waitingForWorker()) {
+      return next();
     }
     tick();
-  }, 2);
-  onCleanup(() => clearInterval(interval));
+    return next();
+  }
+  // const interval = setInterval(() => {
+  //   tick();
+  // }, 100);
+  onCleanup(() => {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+  });
 
   return (
     <div class={styles.App}>
       <header class={styles.header}>
-        <Show when={tiles() != null}>
-          <Map
-            tiles={tiles()!}
-            onTileClick={(x, y) => {
-              console.debug({ x, y });
-              collapse(x, y);
-            }}
-          />
-        </Show>
+        <Map
+          width={() => W}
+          height={() => H}
+          tiles={() => tiles() ?? []}
+          onTileClick={(x, y) => {
+            console.debug({ x, y });
+            collapse(x, y);
+          }}
+        />
         <button onClick={() => setTickActive(!tickActive())}>
           toggle tick
         </button>
+        <button onClick={() => reset()}>reset</button>
       </header>
     </div>
   );

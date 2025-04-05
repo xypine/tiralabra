@@ -8,6 +8,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["aaltofunktionromautus"],
   },
+  worker: {
+    format: "es",
+    plugins: () => [wasm(), topLevelAwait()],
+  },
   server: {
     port: 3000,
   },
