@@ -67,6 +67,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                     let modified_length = checked_states.len();
                     let was_modified = unmodified_length != modified_length;
                     if was_modified {
+                        // println!("{:?} SET {:?}", queue_entry.target, checked_states);
                         target.set_possible_states(checked_states);
                     }
                     was_modified

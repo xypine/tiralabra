@@ -123,16 +123,10 @@ pub mod samples {
                 // identity rules, allow x next to x
                 (STATE_SEA, Direction2D::UP, STATE_SEA),
                 (STATE_SEA, Direction2D::RIGHT, STATE_SEA),
-                (STATE_SEA, Direction2D::DOWN, STATE_SEA),
-                (STATE_SEA, Direction2D::LEFT, STATE_SEA),
                 (STATE_SHORE, Direction2D::UP, STATE_SHORE),
                 (STATE_SHORE, Direction2D::RIGHT, STATE_SHORE),
-                (STATE_SHORE, Direction2D::DOWN, STATE_SHORE),
-                (STATE_SHORE, Direction2D::LEFT, STATE_SHORE),
                 (STATE_LAND, Direction2D::UP, STATE_LAND),
                 (STATE_LAND, Direction2D::RIGHT, STATE_LAND),
-                (STATE_LAND, Direction2D::DOWN, STATE_LAND),
-                (STATE_LAND, Direction2D::LEFT, STATE_LAND),
                 // adjacency rules, allow SEA -> SHORE -> LAND
                 (STATE_SEA, Direction2D::UP, STATE_SHORE),
                 (STATE_SEA, Direction2D::RIGHT, STATE_SHORE),
@@ -172,32 +166,18 @@ pub mod samples {
                 // identity rules, allow x next to x
                 (STATE_DEEP_SEA2, Direction2D::UP, STATE_DEEP_SEA2),
                 (STATE_DEEP_SEA2, Direction2D::RIGHT, STATE_DEEP_SEA2),
-                (STATE_DEEP_SEA2, Direction2D::DOWN, STATE_DEEP_SEA2),
-                (STATE_DEEP_SEA2, Direction2D::LEFT, STATE_DEEP_SEA2),
                 (STATE_DEEP_SEA, Direction2D::UP, STATE_DEEP_SEA),
                 (STATE_DEEP_SEA, Direction2D::RIGHT, STATE_DEEP_SEA),
-                (STATE_DEEP_SEA, Direction2D::DOWN, STATE_DEEP_SEA),
-                (STATE_DEEP_SEA, Direction2D::LEFT, STATE_DEEP_SEA),
                 (STATE_SEA, Direction2D::UP, STATE_SEA),
                 (STATE_SEA, Direction2D::RIGHT, STATE_SEA),
-                (STATE_SEA, Direction2D::DOWN, STATE_SEA),
-                (STATE_SEA, Direction2D::LEFT, STATE_SEA),
                 (STATE_SHORE, Direction2D::UP, STATE_SHORE),
                 (STATE_SHORE, Direction2D::RIGHT, STATE_SHORE),
-                (STATE_SHORE, Direction2D::DOWN, STATE_SHORE),
-                (STATE_SHORE, Direction2D::LEFT, STATE_SHORE),
                 (STATE_LAND, Direction2D::UP, STATE_LAND),
                 (STATE_LAND, Direction2D::RIGHT, STATE_LAND),
-                (STATE_LAND, Direction2D::DOWN, STATE_LAND),
-                (STATE_LAND, Direction2D::LEFT, STATE_LAND),
                 (STATE_FOREST, Direction2D::UP, STATE_FOREST),
                 (STATE_FOREST, Direction2D::RIGHT, STATE_FOREST),
-                (STATE_FOREST, Direction2D::DOWN, STATE_FOREST),
-                (STATE_FOREST, Direction2D::LEFT, STATE_FOREST),
                 (STATE_FOREST2, Direction2D::UP, STATE_FOREST2),
                 (STATE_FOREST2, Direction2D::RIGHT, STATE_FOREST2),
-                (STATE_FOREST2, Direction2D::DOWN, STATE_FOREST2),
-                (STATE_FOREST2, Direction2D::LEFT, STATE_FOREST2),
                 // adjacency rules, allow DEEP_SEA -> SEA -> SHORE -> LAND -> FOREST
                 (STATE_DEEP_SEA2, Direction2D::UP, STATE_DEEP_SEA),
                 (STATE_DEEP_SEA2, Direction2D::RIGHT, STATE_DEEP_SEA),
@@ -223,6 +203,126 @@ pub mod samples {
                 (STATE_FOREST, Direction2D::RIGHT, STATE_FOREST2),
                 (STATE_FOREST, Direction2D::DOWN, STATE_FOREST2),
                 (STATE_FOREST, Direction2D::LEFT, STATE_FOREST2),
+            ]);
+            RuleSet::new(possible, allowed)
+        }
+    }
+
+    pub mod flowers_buggy {
+        use super::*;
+        const STATE_GROUND: u64 = 0;
+        const STATE_SOIL: u64 = 1;
+        const STATE_SKY: u64 = 2;
+        const STATE_STEM: u64 = 3;
+        pub fn rules() -> RuleSet2D {
+            let possible = BTreeSet::from([STATE_GROUND, STATE_SOIL, STATE_SKY, STATE_STEM]);
+            let allowed = HashSet::from([
+                // Allow ground next to ground
+                (STATE_GROUND, Direction2D::LEFT, STATE_GROUND),
+                (STATE_GROUND, Direction2D::RIGHT, STATE_GROUND),
+                // Allow soil on top of ground
+                (STATE_SOIL, Direction2D::DOWN, STATE_GROUND),
+                // Allow soil next to soil
+                (STATE_SOIL, Direction2D::LEFT, STATE_SOIL),
+                (STATE_SOIL, Direction2D::RIGHT, STATE_SOIL),
+                // Allow stems in soil
+                (STATE_SOIL, Direction2D::LEFT, STATE_STEM),
+                (STATE_SOIL, Direction2D::RIGHT, STATE_STEM),
+                // Allow stem on top of stem
+                (STATE_STEM, Direction2D::DOWN, STATE_STEM),
+                // Allow sky on top of soil, stem
+                (STATE_SKY, Direction2D::DOWN, STATE_SOIL),
+                (STATE_SKY, Direction2D::DOWN, STATE_STEM),
+                // Allow sky next to sky
+                (STATE_SKY, Direction2D::DOWN, STATE_SKY),
+                (STATE_SKY, Direction2D::LEFT, STATE_SKY),
+            ]);
+            RuleSet::new(possible, allowed)
+        }
+    }
+
+    pub mod flowers_singlepixel {
+        use super::*;
+        pub const STATE_GROUND: u64 = 0;
+        pub const STATE_SOIL: u64 = 1;
+        pub const STATE_SKY: u64 = 2;
+        pub const STATE_STEM: u64 = 3;
+        pub const STATE_BRANCH: u64 = 4;
+        pub const STATE_CURVE_L: u64 = 8;
+        pub const STATE_CURVE_R: u64 = 9;
+        pub const STATE_BRANCH_L: u64 = 5;
+        pub const STATE_BRANCH_R: u64 = 6;
+        pub const STATE_FLOWER: u64 = 7;
+        pub fn rules() -> RuleSet2D {
+            let possible = BTreeSet::from([
+                STATE_GROUND,
+                STATE_SOIL,
+                STATE_SKY,
+                STATE_STEM,
+                STATE_BRANCH,
+                STATE_BRANCH_L,
+                STATE_BRANCH_R,
+                STATE_FLOWER,
+                STATE_CURVE_L,
+                STATE_CURVE_R,
+            ]);
+            let allowed = HashSet::from([
+                // Allow ground next to ground
+                (STATE_GROUND, Direction2D::LEFT, STATE_GROUND),
+                (STATE_GROUND, Direction2D::RIGHT, STATE_GROUND),
+                // Allow soil on top of ground
+                (STATE_SOIL, Direction2D::DOWN, STATE_GROUND),
+                // Allow soil next to soil
+                (STATE_SOIL, Direction2D::LEFT, STATE_SOIL),
+                (STATE_SOIL, Direction2D::RIGHT, STATE_SOIL),
+                // Allow stems in soil
+                (STATE_STEM, Direction2D::DOWN, STATE_GROUND),
+                (STATE_SOIL, Direction2D::LEFT, STATE_STEM),
+                (STATE_SOIL, Direction2D::RIGHT, STATE_STEM),
+                // Allow stem on top of stem
+                (STATE_STEM, Direction2D::DOWN, STATE_STEM),
+                (STATE_BRANCH, Direction2D::DOWN, STATE_STEM),
+                (STATE_CURVE_L, Direction2D::DOWN, STATE_STEM),
+                (STATE_CURVE_R, Direction2D::DOWN, STATE_STEM),
+                // Allow branch on sides of stem
+                (STATE_BRANCH_L, Direction2D::LEFT, STATE_BRANCH),
+                (STATE_BRANCH_L, Direction2D::LEFT, STATE_CURVE_L),
+                (STATE_BRANCH_R, Direction2D::RIGHT, STATE_BRANCH),
+                (STATE_BRANCH_R, Direction2D::RIGHT, STATE_CURVE_R),
+                (STATE_BRANCH_L, Direction2D::DOWN, STATE_SKY),
+                (STATE_BRANCH_R, Direction2D::DOWN, STATE_SKY),
+                // Allow stem on top of branch
+                (STATE_STEM, Direction2D::DOWN, STATE_BRANCH_L),
+                (STATE_STEM, Direction2D::DOWN, STATE_BRANCH_R),
+                (STATE_BRANCH, Direction2D::DOWN, STATE_BRANCH_L),
+                (STATE_BRANCH, Direction2D::DOWN, STATE_BRANCH_R),
+                (STATE_CURVE_L, Direction2D::DOWN, STATE_BRANCH_L),
+                (STATE_CURVE_L, Direction2D::DOWN, STATE_BRANCH_R),
+                (STATE_CURVE_R, Direction2D::DOWN, STATE_BRANCH_L),
+                (STATE_CURVE_R, Direction2D::DOWN, STATE_BRANCH_R),
+                // Allow sky on top of soil, stem, branch
+                (STATE_SKY, Direction2D::DOWN, STATE_SOIL),
+                (STATE_SKY, Direction2D::DOWN, STATE_FLOWER),
+                (STATE_FLOWER, Direction2D::DOWN, STATE_STEM),
+                (STATE_FLOWER, Direction2D::DOWN, STATE_BRANCH_L),
+                (STATE_FLOWER, Direction2D::DOWN, STATE_BRANCH_R),
+                (STATE_SKY, Direction2D::DOWN, STATE_BRANCH),
+                (STATE_SKY, Direction2D::DOWN, STATE_CURVE_L),
+                (STATE_SKY, Direction2D::DOWN, STATE_CURVE_R),
+                // Allow sky next to sky
+                (STATE_SKY, Direction2D::DOWN, STATE_SKY),
+                (STATE_SKY, Direction2D::LEFT, STATE_SKY),
+                // Allow sky next to stem
+                (STATE_SKY, Direction2D::RIGHT, STATE_STEM),
+                (STATE_SKY, Direction2D::LEFT, STATE_STEM),
+                (STATE_SKY, Direction2D::RIGHT, STATE_BRANCH),
+                (STATE_SKY, Direction2D::LEFT, STATE_BRANCH),
+                (STATE_SKY, Direction2D::RIGHT, STATE_BRANCH_R),
+                (STATE_SKY, Direction2D::LEFT, STATE_CURVE_R),
+                (STATE_SKY, Direction2D::LEFT, STATE_BRANCH_L),
+                (STATE_SKY, Direction2D::RIGHT, STATE_CURVE_L),
+                (STATE_SKY, Direction2D::RIGHT, STATE_FLOWER),
+                (STATE_SKY, Direction2D::LEFT, STATE_FLOWER),
             ]);
             RuleSet::new(possible, allowed)
         }

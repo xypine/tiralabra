@@ -39,6 +39,20 @@ impl Rules {
         Self(inner)
     }
 
+    pub fn check(
+        &self,
+        target_tile_states: Vec<TileState>,
+        source_tile_states: Vec<TileState>,
+        direction: Direction2D,
+    ) -> Vec<TileState> {
+        let target = Tile::new(BTreeSet::from_iter(target_tile_states));
+        let source = Tile::new(BTreeSet::from_iter(source_tile_states));
+        self.0
+            .check(&target, &source, direction)
+            .into_iter()
+            .collect()
+    }
+
     pub fn checkers() -> Self {
         let inner = crate::rules::samples::checkers::rules();
         Self(inner)
@@ -56,6 +70,11 @@ impl Rules {
 
     pub fn stripes() -> Self {
         let inner = crate::rules::samples::stripes::rules();
+        Self(inner)
+    }
+
+    pub fn flowers_singlepixel() -> Self {
+        let inner = crate::rules::samples::flowers_singlepixel::rules();
         Self(inner)
     }
 }
@@ -91,8 +110,9 @@ impl Grid {
 
     pub fn is_finished(&self) -> bool {
         let uncollapsed_tile_exists = self
-            .dump()
-            .into_iter()
+            .0
+            .tiles_ref()
+            .iter()
             .any(|t| t.possible_states_ref().count() != 1);
         !uncollapsed_tile_exists
     }

@@ -6,9 +6,10 @@ import styles from "./Map.module.css";
 const Map: Component<{
   tiles: Accessor<Tile[][]>;
   onTileClick: (x: number, y: number) => void;
+  onTileRightClick: (x: number, y: number) => void;
   width: Accessor<number>;
   height: Accessor<number>;
-}> = ({ width, height, tiles, onTileClick }) => {
+}> = ({ width, height, tiles, onTileClick, onTileRightClick }) => {
   const mtiles = createMemo(tiles);
   const heightIterator = createMemo(() =>
     Array.from({ length: height() }, (_, i) => i),
@@ -44,10 +45,11 @@ const Map: Component<{
           >
             <For each={widthIterator()}>
               {(x) => (
-                <Tile
+                <TileVisual
                   x={x}
                   y={y}
                   onTileClick={() => onTileClick(x, y)}
+                  onTileRightClick={() => onTileRightClick(x, y)}
                   tile={() => getTile(x, y)}
                 />
               )}
@@ -59,12 +61,13 @@ const Map: Component<{
   );
 };
 
-const Tile: Component<{
+export const TileVisual: Component<{
   tile: Accessor<Tile | undefined>;
   onTileClick: () => void;
+  onTileRightClick: () => void;
   x: number;
   y: number;
-}> = ({ x, y, tile, onTileClick }) => {
+}> = ({ x, y, tile, onTileClick, onTileRightClick }) => {
   const mtile = createMemo(tile);
   return (
     <div data-x={x} data-y={y}>
@@ -78,6 +81,11 @@ const Tile: Component<{
         }
         onClick={() => {
           onTileClick();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onTileRightClick();
         }}
       >
         <For each={mtile()?.possible_states}>

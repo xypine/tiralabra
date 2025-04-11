@@ -14,6 +14,9 @@
   packages = with pkgs; [
     # Allows running tests as code changes
     bacon
+    # Code coverage
+    cargo-tarpaulin
+    cargo-mutants
     # Easy compilation to web assembly
     wasm-pack
     wasm-bindgen-cli

@@ -77,6 +77,10 @@ impl DynamicSizeGrid2D {
     pub fn dump(&self) -> Vec<Tile> {
         self.tiles.clone()
     }
+
+    pub fn tiles_ref(&self) -> &Vec<Tile> {
+        &self.tiles
+    }
 }
 
 impl DynamicSizeGrid2D {
