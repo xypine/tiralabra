@@ -1,7 +1,7 @@
 //! What tiles are allowed to exists and where
 
 use std::{
-    collections::{BTreeSet, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     hash::Hash,
 };
 
@@ -22,6 +22,7 @@ pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     /// - B is allowed on the right side of A
     /// - A is allowed on the left side of B
     pub allowed: HashSet<(TileState, TDirection, TileState)>,
+    pub state_representations: HashMap<TileState, String>,
 }
 
 pub type RuleSet2D = RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>;
@@ -32,6 +33,7 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
     pub fn new(
         possible: BTreeSet<TileState>,
         allowed: HashSet<(TileState, TDirection, TileState)>,
+        state_representations: HashMap<TileState, String>,
     ) -> Self {
         let mut allowed_with_mirrored = HashSet::new();
         for entry in allowed {
@@ -42,6 +44,7 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
         Self {
             possible,
             allowed: allowed_with_mirrored,
+            state_representations,
         }
     }
 
@@ -66,6 +69,11 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
 
         checked_possible
     }
+
+    /// Returns a value accepted by the css "background" property
+    pub fn visualize_tile(&self, state: TileState) -> Option<&String> {
+        self.state_representations.get(&state)
+    }
 }
 
 pub mod samples {
@@ -84,7 +92,11 @@ pub mod samples {
                 (STATE_BLACK, Direction2D::DOWN, STATE_WHITE),
                 (STATE_BLACK, Direction2D::LEFT, STATE_WHITE),
             ]);
-            RuleSet::new(possible, allowed)
+            let repr = HashMap::from([
+                (STATE_BLACK, String::from("#000000")),
+                (STATE_WHITE, String::from("#FFFFFF")),
+            ]);
+            RuleSet::new(possible, allowed, repr)
         }
     }
 
@@ -105,7 +117,7 @@ pub mod samples {
                 (STATE_TWO, Direction2D::DOWN, STATE_ONE),
                 (STATE_TWO, Direction2D::RIGHT, STATE_ONE),
             ]);
-            RuleSet::new(possible, allowed)
+            RuleSet::new(possible, allowed, HashMap::new())
         }
     }
 
@@ -119,6 +131,11 @@ pub mod samples {
         const STATE_LAND: u64 = 4;
         pub fn rules() -> RuleSet2D {
             let possible = BTreeSet::from([STATE_SEA, STATE_SHORE, STATE_LAND]);
+            let repr = HashMap::from([
+                (STATE_SEA, String::from("#0000ff")),
+                (STATE_SHORE, String::from("#fff8dc")),
+                (STATE_LAND, String::from("#008000")),
+            ]);
             let allowed = HashSet::from([
                 // identity rules, allow x next to x
                 (STATE_SEA, Direction2D::UP, STATE_SEA),
@@ -137,7 +154,7 @@ pub mod samples {
                 (STATE_SHORE, Direction2D::DOWN, STATE_LAND),
                 (STATE_SHORE, Direction2D::LEFT, STATE_LAND),
             ]);
-            RuleSet::new(possible, allowed)
+            RuleSet::new(possible, allowed, repr)
         }
     }
 
@@ -161,6 +178,15 @@ pub mod samples {
                 STATE_LAND,
                 STATE_FOREST,
                 STATE_FOREST2,
+            ]);
+            let repr = HashMap::from([
+                (STATE_DEEP_SEA2, String::from("#000071")),
+                (STATE_DEEP_SEA, String::from("#00008b")),
+                (STATE_SEA, String::from("#0000ff")),
+                (STATE_SHORE, String::from("#fff8dc")),
+                (STATE_LAND, String::from("#008000")),
+                (STATE_FOREST, String::from("#006400")),
+                (STATE_FOREST2, String::from("#005b00")),
             ]);
             let allowed = HashSet::from([
                 // identity rules, allow x next to x
@@ -204,40 +230,7 @@ pub mod samples {
                 (STATE_FOREST, Direction2D::DOWN, STATE_FOREST2),
                 (STATE_FOREST, Direction2D::LEFT, STATE_FOREST2),
             ]);
-            RuleSet::new(possible, allowed)
-        }
-    }
-
-    pub mod flowers_buggy {
-        use super::*;
-        const STATE_GROUND: u64 = 0;
-        const STATE_SOIL: u64 = 1;
-        const STATE_SKY: u64 = 2;
-        const STATE_STEM: u64 = 3;
-        pub fn rules() -> RuleSet2D {
-            let possible = BTreeSet::from([STATE_GROUND, STATE_SOIL, STATE_SKY, STATE_STEM]);
-            let allowed = HashSet::from([
-                // Allow ground next to ground
-                (STATE_GROUND, Direction2D::LEFT, STATE_GROUND),
-                (STATE_GROUND, Direction2D::RIGHT, STATE_GROUND),
-                // Allow soil on top of ground
-                (STATE_SOIL, Direction2D::DOWN, STATE_GROUND),
-                // Allow soil next to soil
-                (STATE_SOIL, Direction2D::LEFT, STATE_SOIL),
-                (STATE_SOIL, Direction2D::RIGHT, STATE_SOIL),
-                // Allow stems in soil
-                (STATE_SOIL, Direction2D::LEFT, STATE_STEM),
-                (STATE_SOIL, Direction2D::RIGHT, STATE_STEM),
-                // Allow stem on top of stem
-                (STATE_STEM, Direction2D::DOWN, STATE_STEM),
-                // Allow sky on top of soil, stem
-                (STATE_SKY, Direction2D::DOWN, STATE_SOIL),
-                (STATE_SKY, Direction2D::DOWN, STATE_STEM),
-                // Allow sky next to sky
-                (STATE_SKY, Direction2D::DOWN, STATE_SKY),
-                (STATE_SKY, Direction2D::LEFT, STATE_SKY),
-            ]);
-            RuleSet::new(possible, allowed)
+            RuleSet::new(possible, allowed, repr)
         }
     }
 
@@ -265,6 +258,18 @@ pub mod samples {
                 STATE_FLOWER,
                 STATE_CURVE_L,
                 STATE_CURVE_R,
+            ]);
+            let repr = HashMap::from([
+                (STATE_GROUND, String::from("#000000")),
+                (STATE_SOIL, String::from("#250500")),
+                (STATE_SKY, String::from("#fff8dc")),
+                (STATE_STEM, String::from("#006400")),
+                (STATE_BRANCH, String::from("#008000")),
+                (STATE_BRANCH_L, String::from("#008000")),
+                (STATE_BRANCH_R, String::from("#008000")),
+                (STATE_FLOWER, String::from("#ffbb55")),
+                (STATE_CURVE_L, String::from("#006400")),
+                (STATE_CURVE_R, String::from("#006400")),
             ]);
             let allowed = HashSet::from([
                 // Allow ground next to ground
@@ -324,7 +329,7 @@ pub mod samples {
                 (STATE_SKY, Direction2D::RIGHT, STATE_FLOWER),
                 (STATE_SKY, Direction2D::LEFT, STATE_FLOWER),
             ]);
-            RuleSet::new(possible, allowed)
+            RuleSet::new(possible, allowed, repr)
         }
     }
 }

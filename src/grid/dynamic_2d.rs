@@ -229,7 +229,7 @@ mod tests {
 
     fn init_and_check(possible: BTreeSet<TileState>, w: usize, h: usize) -> DynamicSizeGrid2D {
         let allowed = HashSet::from([]);
-        let rules = RuleSet::new(possible, allowed);
+        let rules = RuleSet::new(possible, allowed, HashMap::new());
         let grid = DynamicSizeGrid2D::new(w, h, rules);
         assert_eq!(grid.tiles.len(), w * h);
 

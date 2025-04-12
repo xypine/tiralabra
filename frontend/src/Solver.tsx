@@ -12,6 +12,7 @@ import type {
   Location2D,
   Tile,
   TileState,
+  TileVisual,
 } from "aaltofunktionromautus";
 import type {
   InbuiltRuleSet,
@@ -34,6 +35,7 @@ const Solver: Component<{
   rules: Accessor<InbuiltRuleSet>;
 }> = ({ dimensions, rules }) => {
   const [state, setState] = createSignal<State | null>(null);
+  const [tileSet, setTileSet] = createSignal<TileVisual[]>([]);
   const [tickActive, setTickActive] = createSignal(false);
   const tooLargeForTick = createMemo(() => {
     const dim = dimensions();
@@ -50,8 +52,9 @@ const Solver: Component<{
     const w = new Worker();
     w.onmessage = (event) => {
       let data: WorkerResponse = event.data;
-      // console.debug({ data });
+      // console.debug("ui got message", { data });
       let newState = data.state;
+      let newTileSet = data.tileset;
       if (data.type === "tick_update") {
         const res = data.result;
         if (res === undefined) {
@@ -63,6 +66,9 @@ const Solver: Component<{
       }
 
       requestAnimationFrame(() => {
+        if (newTileSet) {
+          setTileSet(newTileSet);
+        }
         setState(newState);
       });
       setWaitingForWorker(false);
@@ -161,6 +167,7 @@ const Solver: Component<{
           width={() => state()?.width ?? 0}
           height={() => state()?.height ?? 0}
           tiles={() => tiles() ?? []}
+          tileset={tileSet}
           onTileClick={(x, y) => {
             console.debug({ x, y });
             collapse(x, y);

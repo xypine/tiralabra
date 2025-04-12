@@ -190,7 +190,7 @@ mod tests {
         possible: BTreeSet<TileState>,
     ) -> ConstantSizeGrid2D<W, H> {
         let allowed = HashSet::from([]);
-        let rules = RuleSet::new(possible, allowed);
+        let rules = RuleSet::new(possible, allowed, HashMap::new());
         let grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
         assert_eq!(grid.tiles.len(), W);
         for col in &grid.tiles {

@@ -1,15 +1,16 @@
 import { Accessor, Component, createMemo, For } from "solid-js";
-import type { Tile } from "aaltofunktionromautus";
+import type { Tile, TileVisual as TTileVisual } from "aaltofunktionromautus";
 
 import styles from "./Map.module.css";
 
 const Map: Component<{
+  tileset: Accessor<TTileVisual[]>;
   tiles: Accessor<Tile[][]>;
   onTileClick: (x: number, y: number) => void;
   onTileRightClick: (x: number, y: number) => void;
   width: Accessor<number>;
   height: Accessor<number>;
-}> = ({ width, height, tiles, onTileClick, onTileRightClick }) => {
+}> = ({ width, height, tiles, tileset, onTileClick, onTileRightClick }) => {
   const mtiles = createMemo(tiles);
   const heightIterator = createMemo(() =>
     Array.from({ length: height() }, (_, i) => i),
@@ -17,6 +18,11 @@ const Map: Component<{
   const widthIterator = createMemo(() =>
     Array.from({ length: width() }, (_, i) => i),
   );
+  const tilesetStyle = createMemo(() => {
+    const ts = tileset();
+    const entries = ts.map(([state, visual]) => [`--tv-${state}`, visual]);
+    return Object.fromEntries(entries);
+  });
   const getTile = (x: number, y: number) => {
     return mtiles().at(x)?.at(y);
   };
@@ -33,6 +39,7 @@ const Map: Component<{
         height: "var(--target-area)",
         display: "flex",
         "flex-direction": "column",
+        ...tilesetStyle(),
       }}
     >
       <For each={heightIterator()}>
@@ -89,7 +96,13 @@ export const TileVisual: Component<{
         }}
       >
         <For each={mtile()?.possible_states}>
-          {(state) => <div class={styles.tile} data-tile={state} />}
+          {(state) => (
+            <div
+              class={styles.tile}
+              data-tile={state}
+              style={{ background: `var(--tv-${state})` }}
+            />
+          )}
         </For>
       </div>
     </div>

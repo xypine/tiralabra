@@ -1,7 +1,7 @@
 //! Interface and structures that can be used in the browser through Web Assembly
 //! TypeScript types are automatically generated using Tsify
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
@@ -25,16 +25,31 @@ impl RulePair {
     }
 }
 
+#[derive(Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct TileVisual(TileState, Option<String>);
+
 #[wasm_bindgen]
 pub struct Rules(RuleSet2D);
 
 #[wasm_bindgen]
 impl Rules {
     #[wasm_bindgen(constructor)]
-    pub fn new(possible: Vec<TileState>, allowed: Vec<RulePair>) -> Self {
+    pub fn new(
+        possible: Vec<TileState>,
+        allowed: Vec<RulePair>,
+        possible_repr: Vec<String>,
+    ) -> Self {
+        let mut repr = HashMap::new();
+        for (i, state) in possible.iter().enumerate() {
+            if let Some(state_repr) = possible_repr.get(i).cloned() {
+                repr.insert(*state, state_repr);
+            }
+        }
         let inner = RuleSet2D::new(
             BTreeSet::from_iter(possible),
             HashSet::from_iter(allowed.into_iter().map(|p| (p.0, p.1, p.2))),
+            repr,
         );
         Self(inner)
     }
@@ -50,6 +65,15 @@ impl Rules {
         self.0
             .check(&target, &source, direction)
             .into_iter()
+            .collect()
+    }
+
+    pub fn get_visual_tileset(&self) -> Vec<TileVisual> {
+        self.0
+            .possible
+            .iter()
+            .map(|state| (state, self.0.visualize_tile(*state).cloned()))
+            .map(|(state, v)| TileVisual(*state, v))
             .collect()
     }
 

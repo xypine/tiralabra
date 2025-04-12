@@ -4,8 +4,9 @@ import initSync, {
   Dimensions,
   Tile,
   TileState,
+  Direction2D,
+  TileVisual,
 } from "aaltofunktionromautus";
-import { Direction2D } from "../pkg/aaltofunktionromautus";
 
 const worker_id = Math.floor(Math.random() * 1000);
 console.log(`Worker ${worker_id} loaded`);
@@ -55,22 +56,23 @@ export type WorkerRequest = BaseSettings &
 
 export type WorkerResponse = {
   state: State;
+} & {
+  tileset?: TileVisual[];
 } & (
-  | {
-      type: "state_update";
-    }
-  | {
-      type: "tick_update";
-      result: boolean | undefined;
-    }
-  | {
-      type: "rule_check";
-      allowed: TileState[];
-    }
-);
+    | {
+        type: "state_update";
+      }
+    | {
+        type: "tick_update";
+        result: boolean | undefined;
+      }
+    | {
+        type: "rule_check";
+        allowed: TileState[];
+      }
+  );
 
 function getRules(ruleset?: InbuiltRuleSet) {
-  console.debug("getRules", { ruleset });
   let rules;
   switch (ruleset) {
     case "terrain":
@@ -101,27 +103,41 @@ async function initWasm() {
 }
 
 async function reset(dimensions: Dimensions, ruleset?: InbuiltRuleSet) {
-  console.debug("Rules loaded");
-  const g = new Grid(getRules(ruleset), dimensions.width, dimensions.height);
-  console.debug("Grid created");
+  const rules = getRules(ruleset);
+  const tileset = rules.get_visual_tileset();
+  const grid = new Grid(rules, dimensions.width, dimensions.height);
   if (ruleset === "flowers_singlepixel") {
     console.debug("collapsing ground");
-    g.collapse(0, g.get_dimensions().height - 1, BigInt(0));
+    grid.collapse(0, grid.get_dimensions().height - 1, BigInt(0));
   }
-  return g;
+  persistent_state = { grid, tileset };
+  return persistent_state;
 }
 
-let grid: Grid;
-function state(): State {
-  const dimensions = grid.get_dimensions();
-  const tiles = grid.dump();
+type PersistentState = { grid: Grid; tileset: TileVisual[] };
+type PersistentStateUpdate = PersistentState & { was_reset?: boolean };
+let persistent_state: PersistentState | undefined = undefined;
+async function usePersistentState(basics: BaseSettings) {
+  let state = persistent_state;
+  let was_reset = false;
+  if (state === undefined) {
+    state = await reset(basics.dimensions, basics.rules);
+    persistent_state = state;
+    was_reset = true;
+  }
+  return { ...state, was_reset };
+}
+
+function state(s: PersistentState): State {
+  const dimensions = s.grid.get_dimensions();
+  const tiles = s.grid.dump();
   return {
     ...dimensions,
     tiles,
   };
 }
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  console.log("Worker got message", e.data);
+  // console.log("Worker got message", e.data);
 
   // wait until wasm has been loaded
   if (!initPromise) {
@@ -129,33 +145,32 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   }
   await initPromise;
 
-  if (grid === undefined) {
-    grid = await reset(e.data.dimensions, e.data.rules);
-  }
-  console.debug("grid is set");
-  if (grid.is_finished()) {
-    console.debug("grid has finished");
+  let s: PersistentStateUpdate = await usePersistentState(e.data);
+
+  if (s.grid.is_finished()) {
     if (e.data.type === "tick") {
-      console.info("persiting image for a bit");
+      console.info("persiting image or a bit");
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    grid = await reset(e.data.dimensions, e.data.rules);
+    s = await reset(e.data.dimensions, e.data.rules);
   }
-  console.debug("grid has been checked");
 
   if (e.data.type === "reset") {
-    grid = await reset(e.data.dimensions, e.data.rules);
+    if (!s.was_reset) {
+      s = await reset(e.data.dimensions, e.data.rules);
+    }
     const resp: WorkerResponse = {
       type: "state_update",
-      state: state(),
+      state: state(s),
+      tileset: s.tileset,
     };
     self.postMessage(resp);
   } else if (e.data.type === "tick") {
-    await tick(e.data);
+    await tick(e.data, s);
   } else if (e.data.type === "run") {
-    await run(e.data);
+    await run(e.data, s);
   } else if (e.data.type === "collapse") {
-    await collapse(e.data);
+    await collapse(e.data, s);
   } else if (e.data.type === "rule_check") {
     const rules = getRules(e.data.rules);
     console.debug({ rules });
@@ -169,7 +184,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     const resp: WorkerResponse = {
       type: "rule_check",
       allowed,
-      state: state(),
+      state: state(s),
     };
     self.postMessage(resp);
   } else {
@@ -177,44 +192,47 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   }
 };
 
-async function tick(data: WorkerRequest) {
+async function tick(data: WorkerRequest, s: PersistentStateUpdate) {
   if (data.type !== "tick") {
     throw new Error("Unexpected message type");
   }
-  grid.tick();
+  s.grid.tick();
   const resp: WorkerResponse = {
     type: "state_update",
-    state: state(),
+    state: state(s),
+    tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
 }
 
-async function run(data: WorkerRequest) {
+async function run(data: WorkerRequest, s: PersistentStateUpdate) {
   if (data.type !== "run") {
     throw new Error("Unexpected message type");
   }
-  const dimensions = grid.get_dimensions();
-  grid.run(dimensions.width * dimensions.height);
+  const dimensions = s.grid.get_dimensions();
+  s.grid.run(dimensions.width * dimensions.height);
   const resp: WorkerResponse = {
     type: "state_update",
-    state: state(),
+    state: state(s),
+    tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
 }
 
-async function collapse(data: WorkerRequest) {
-  console.debug("collapse", { data });
+async function collapse(data: WorkerRequest, s: PersistentStateUpdate) {
+  // console.debug("collapse", { data });
   if (data.type !== "collapse") {
     throw new Error("Unexpected message type");
   }
-  grid.collapse(
+  s.grid.collapse(
     data.x,
     data.y,
     data.state !== undefined ? BigInt(data.state) : undefined,
   );
   const resp: WorkerResponse = {
     type: "state_update",
-    state: state(),
+    state: state(s),
+    tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
 }
