@@ -15,3 +15,4 @@
 - [Week 2](/documentation/weekly_reports/week2.md)
 - [Week 3](/documentation/weekly_reports/week3.md)
 - [Week 4](/documentation/weekly_reports/week4.md)
+- [Week 5](/documentation/weekly_reports/week5.md)
