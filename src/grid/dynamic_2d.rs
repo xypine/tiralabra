@@ -31,6 +31,8 @@ pub struct DynamicSizeGrid2D {
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
     /// Used to invalidate entries in the entropy_heap
     entropy_invalidation_matrix: Vec<usize>,
+    /// Keeps history of tile modifications for backtracking
+    pub update_log: Vec<(Location2D, Tile)>,
 }
 
 impl DynamicSizeGrid2D {
@@ -44,8 +46,9 @@ impl DynamicSizeGrid2D {
         }
 
         let tile_index = self.location_to_index(location);
-        self.tiles[tile_index] = state;
+        self.tiles[tile_index] = state.clone();
         self.update_tile_entropy(location);
+        self.update_log.push((location, state));
 
         Some(())
     }
@@ -78,6 +81,19 @@ impl DynamicSizeGrid2D {
         self.tiles.clone()
     }
 
+    pub fn dump_at_time(&self, i_max: usize) -> Vec<Tile> {
+        let mut tiles = vec![Tile::new(self.rules.possible.clone()); self.width * self.height];
+        let mut i = 0;
+        for (location, new_state) in &self.update_log {
+            tiles[self.location_to_index(*location)] = new_state.clone();
+            i += 1;
+            if i > i_max {
+                break;
+            }
+        }
+        tiles
+    }
+
     pub fn tiles_ref(&self) -> &Vec<Tile> {
         &self.tiles
     }
@@ -98,6 +114,7 @@ impl DynamicSizeGrid2D {
             tiles,
             entropy_heap: BinaryHeap::new(),
             entropy_invalidation_matrix: tile_invalidation_matrix,
+            update_log: Vec::new(),
         };
 
         for x in 0..width {
@@ -296,5 +313,34 @@ mod tests {
         debug_print(&grid);
 
         crate::grid::tests::get_neighbours_sanity(W, H, grid);
+    }
+
+    #[test]
+    fn update_tiles() {
+        const W: usize = 3;
+        const H: usize = 3;
+        let mut grid = init_id(W, H);
+        debug_print(&grid);
+
+        crate::grid::tests::update_tiles_sanity(W, H, &mut grid);
+    }
+
+    #[test]
+    fn entropy_heap_empty() {
+        const W: usize = 0;
+        const H: usize = 0;
+        let mut grid = init_id(W, H);
+
+        assert!(grid.get_lowest_entropy_position().is_none());
+    }
+
+    #[test]
+    fn update_entropy() {
+        const W: usize = 3;
+        const H: usize = 3;
+        let mut grid = init_id(W, H);
+        debug_print(&grid);
+
+        crate::grid::tests::update_tiles_entropy(W, H, &mut grid);
     }
 }

@@ -16,6 +16,7 @@ use crate::{
     },
 };
 
+#[derive(Debug)]
 pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
     pub rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
     tiles: [[Tile; H]; W],
@@ -258,5 +259,34 @@ mod tests {
         debug_print(&grid);
 
         crate::grid::tests::get_neighbours_sanity(W, H, grid);
+    }
+
+    #[test]
+    fn entropy_heap_empty() {
+        const W: usize = 0;
+        const H: usize = 0;
+        let mut grid = init_id::<W, H>();
+
+        assert!(grid.get_lowest_entropy_position().is_none());
+    }
+
+    #[test]
+    fn update_tiles() {
+        const W: usize = 3;
+        const H: usize = 3;
+        let mut grid = init_id::<W, H>();
+        debug_print(&grid);
+
+        crate::grid::tests::update_tiles_sanity(W, H, &mut grid);
+    }
+
+    #[test]
+    fn update_entropy() {
+        const W: usize = 3;
+        const H: usize = 3;
+        let mut grid = init_id::<W, H>();
+        debug_print(&grid);
+
+        crate::grid::tests::update_tiles_entropy(W, H, &mut grid);
     }
 }
