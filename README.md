@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/xypine/tiralabra/graph/badge.svg?token=FSJ08BMYCB)](https://codecov.io/gh/xypine/tiralabra)
+
 ## Usage
 
 [Live Web Demo](https://tiralabra.eliaseskelinen.fi/)
