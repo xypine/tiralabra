@@ -2,8 +2,17 @@
 
 ## Architecture
 
-`src/interface/mod.rs` defines high level interfaces used to implement the algorithm
-`src/wave_function_collapse` includes the actual implementation
+`src/wave_function_collapse` implementation of the main algorithm - which is quite short as it has been abstracted quite a bit
+
+`src/tile_extraction` implementation of "tile extraction", the process of turning an input image into tiles that can be combined according to some `RuleSet`
+
+`src/tile`, `src/grid` data structures for storing the current grid state
+
+`src/rules` data structure for storing and checking generated rules between tiles
+
+`src/utils` helper data structures for positions, directions and "entropy calculations"
+
+`src/wasm` bindings to web assembly (everything here can be called from javascript)
 
 ## Time complexity
 
