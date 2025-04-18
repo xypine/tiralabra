@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod e2e_tests;
 
-use std::collections::VecDeque;
+use std::collections::{BTreeSet, VecDeque};
 
 use crate::{
     interface::{
@@ -29,14 +29,14 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
             .ok_or(WaveFunctionCollapseInterruption::Contradiction(position))?;
 
         let neighbours = self.get_neighbours(position);
-        for (_direction, npos) in neighbours {
-            if let Some(neighbour_position) = npos {
-                self.propagate(VecDeque::from([PropagateQueueEntry {
+        let initial_queue =
+            VecDeque::from_iter(neighbours.into_iter().flat_map(|(_direction, npos)| {
+                npos.map(|neighbour_position| PropagateQueueEntry {
                     source: position,
                     target: neighbour_position,
-                }]))?;
-            }
-        }
+                })
+            }));
+        self.propagate(initial_queue)?;
 
         Ok(())
     }
@@ -52,28 +52,27 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                 .expect("converting propagate location to delta");
             let direction =
                 Direction2D::try_from(delta).expect("converting propagate delta to direction");
-            // println!("{queue_entry:?} {direction:?}");
             let source = self
                 .get_tile(queue_entry.source)
                 .expect("getting propagation source");
             let rules = self.get_rules().clone();
-            let was_modified = self
+            let should_propagate = self
                 .with_tile(queue_entry.target, |target| {
-                    if target.has_collapsed() {
-                        return false;
-                    }
-                    let unmodified_length = target.possible_states_ref().count();
+                    let old_states: BTreeSet<_> = target.possible_states().collect();
                     let checked_states = rules.check(target, &source, direction);
-                    let modified_length = checked_states.len();
-                    let was_modified = unmodified_length != modified_length;
+                    if checked_states.is_empty() {
+                        return Err(WaveFunctionCollapseInterruption::Contradiction(
+                            queue_entry.target,
+                        ));
+                    }
+                    let was_modified = old_states != checked_states;
                     if was_modified {
-                        // println!("{:?} SET {:?}", queue_entry.target, checked_states);
                         target.set_possible_states(checked_states);
                     }
-                    was_modified
+                    Ok(was_modified)
                 })
-                .expect("updating tile during propagation");
-            if was_modified {
+                .expect("updating tile during propagation")?;
+            if should_propagate {
                 let neighbours = self.get_neighbours(queue_entry.target);
                 for (_direction, npos) in neighbours {
                     if let Some(neighbour_position) = npos {
@@ -101,9 +100,12 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeSet, HashSet};
+    use std::collections::{BTreeSet, HashMap, HashSet};
 
-    use crate::{grid::constant_2d::ConstantSizeGrid2D, rules::RuleSet};
+    use crate::{
+        grid::constant_2d::ConstantSizeGrid2D,
+        rules::{RuleSet, RuleSet2D},
+    };
 
     use super::*;
 
@@ -111,7 +113,7 @@ mod tests {
     fn find_lowest_entropy_sanity() {
         const W: usize = 2;
         const H: usize = 2;
-        let rules = RuleSet::new(BTreeSet::from([1, 2, 3]), HashSet::from([]));
+        let rules = RuleSet::new(BTreeSet::from([1, 2, 3]), HashSet::from([]), HashMap::new());
         let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
 
         let lowest_entropy_location = Location2D { x: 0, y: 1 };
@@ -137,5 +139,63 @@ mod tests {
 
         let implementation = grid.get_lowest_entropy_position().unwrap();
         assert_eq!(lowest_entropy_location, implementation);
+    }
+
+    #[test]
+    fn propagation_race_condition_a_cw() {
+        // With an incorrect implementation of the algorithm, we might end up in a situation where
+        // we collapse a cell into an invalid state, as a previous collapse hasn't propagated this
+        // far _yet_.
+
+        const STATE_ONE: TileState = 1;
+        const STATE_TWO: TileState = 2;
+        const STATE_THREE: TileState = 3;
+        const STATE_FOUR: TileState = 4;
+        let rules = RuleSet2D::new(
+            BTreeSet::from([STATE_ONE, STATE_TWO, STATE_THREE, STATE_FOUR]),
+            HashSet::from([
+                (STATE_ONE, Direction2D::RIGHT, STATE_TWO),
+                (STATE_TWO, Direction2D::DOWN, STATE_THREE),
+                (STATE_THREE, Direction2D::LEFT, STATE_FOUR),
+            ]),
+            HashMap::new(),
+        );
+
+        const W: usize = 2;
+        const H: usize = 2;
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
+        let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_ONE));
+
+        assert!(
+            matches!(result, Err(WaveFunctionCollapseInterruption::Contradiction(location)) if location == Location2D{x: 0, y: 1})
+        );
+    }
+
+    #[test]
+    fn propagation_race_condition_b() {
+        // see propagation_race_condition_a_cw
+
+        const STATE_ONE: TileState = 1;
+        const STATE_TWO: TileState = 2;
+        const STATE_THREE: TileState = 3;
+        const STATE_FOUR: TileState = 4;
+        let rules = RuleSet2D::new(
+            BTreeSet::from([STATE_ONE, STATE_TWO, STATE_THREE, STATE_FOUR]),
+            HashSet::from([
+                (STATE_ONE, Direction2D::LEFT, STATE_TWO),
+                (STATE_TWO, Direction2D::UP, STATE_THREE),
+                (STATE_THREE, Direction2D::RIGHT, STATE_FOUR),
+            ]),
+            HashMap::new(),
+        );
+
+        const W: usize = 2;
+        const H: usize = 2;
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
+        let result = grid.collapse(Location2D { x: 1, y: 1 }, Some(STATE_ONE));
+
+        assert!(
+            matches!(result, Err(WaveFunctionCollapseInterruption::Contradiction(location)) if location == Location2D{x: 1, y: 0})
+        );
     }
 }
