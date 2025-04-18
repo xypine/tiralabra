@@ -7,7 +7,7 @@ use image::DynamicImage;
 
 use crate::{
     rules::RuleSet2D,
-    tile::simple::TileState,
+    tile::TileState,
     tile_extraction::helpers::{hash, pattern, reflect, rotate},
     utils::space::{Direction2D, NEIGHBOUR_COUNT_2D},
 };

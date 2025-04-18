@@ -13,8 +13,8 @@ use interface::{
 use crate::{
     grid::GridInterface,
     tile::{
-        TileInterface,
-        simple::{Tile, TileState},
+        interface::TileInterface,
+        {Tile, TileState},
     },
     utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };

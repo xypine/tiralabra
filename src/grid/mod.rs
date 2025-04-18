@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::{rules::RuleSet, tile::TileInterface, utils::space::Direction};
+use crate::{rules::RuleSet, tile::interface::TileInterface, utils::space::Direction};
 
 pub mod constant_2d;
 pub mod dynamic_2d;

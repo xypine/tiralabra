@@ -9,8 +9,8 @@ use tsify_next::Tsify;
 use crate::{
     rules::RuleSet,
     tile::{
-        TileInterface,
-        simple::{Tile, TileState},
+        interface::TileInterface,
+        {Tile, TileState},
     },
     utils::{
         entropy::EntropyHeapEntry,

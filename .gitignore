@@ -5,3 +5,9 @@
 .direnv/
 
 pkg/
+
+mutants.out.old/
+mutants.out/
+rules.json
+tarpaulin-report.html
+tiles.txt

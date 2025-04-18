@@ -4,8 +4,8 @@ use std::collections::{BTreeSet, HashSet};
 
 use crate::{
     tile::{
-        TileInterface,
-        simple::{Tile, TileState},
+        interface::TileInterface,
+        {Tile, TileState},
     },
     utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };

@@ -1,6 +1,6 @@
 use crate::{
     grid::{GridInterface, constant_2d::ConstantSizeGrid2D, tests::assert_tile_state},
-    tile::TileInterface,
+    tile::interface::TileInterface,
     utils::space::Location2D,
     wave_function_collapse::interface::{WaveFunctionCollapse, WaveFunctionCollapseInterruption},
 };

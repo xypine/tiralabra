@@ -1,38 +1,105 @@
-pub mod simple;
+pub mod interface;
 
-use rand::Rng;
+use std::collections::BTreeSet;
 
-use crate::utils::entropy::Entropy;
+use interface::TileInterface;
+use rand::seq::IteratorRandom;
+use serde::{Deserialize, Serialize};
+use tsify_next::{Tsify, declare};
 
-pub trait TileInterface<State, TCoords> {
-    /// Returns an iterator over the possible states of the tile.
-    /// No data is copied so the usage of this function should be quite efficient
-    fn possible_states_ref<'a>(&'a self) -> impl Iterator<Item = &'a State>
-    where
-        State: 'a;
+use crate::utils::space::Location2D;
 
-    /// Returns an iterator over copies of possible states of the tile.
-    fn possible_states(&self) -> impl Iterator<Item = State>;
+/// Represents a possible state that any tile in the grid can be collapsed into
+// We can find a better representation later, for now we'll just use the output of the rust hasher
+// trait
+#[declare]
+pub type TileState = u64;
 
-    /// Optimized version of `possible_states_ref.count() == 1`
-    fn has_collapsed(&self) -> bool;
+#[derive(Debug, Clone, PartialEq, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct Tile {
+    possible_states: BTreeSet<TileState>,
+    // can be calculated from possible_states, but we can spare some memory for better performance
+    collapsed: bool,
+}
 
-    /// "Entropy" is used to pick the best tile to collapse
-    /// Basically tiles with few remaining possible states should have low entropy
-    fn calculate_entropy(&self) -> Option<Entropy> {
-        if self.has_collapsed() {
-            return None;
-        }
-        // TODO: Replace with the actual entropy calculation
-        let possible = self.possible_states().count();
-        let entropy = possible as f64;
-        let mut rng = rand::rng();
-        let random = rng.random_range(0.0..0.2);
-        Some(Entropy(entropy + random))
+impl Tile {
+    #[inline]
+    fn invalidate_cache(&mut self) {
+        self.collapsed = self.possible_states.len() == 1;
     }
 
-    /// Forces the tile into a single state.
-    /// If no value is provided, one is chosen from the currently available states.
-    /// If no available states exist, `None` is returned
-    fn collapse(&mut self, value: Option<State>) -> Option<State>;
+    pub fn new(possible: BTreeSet<TileState>) -> Self {
+        let mut new = Self {
+            possible_states: possible,
+            collapsed: false,
+        };
+
+        new.invalidate_cache();
+
+        new
+    }
+
+    pub fn set_possible_states(&mut self, states: BTreeSet<TileState>) {
+        self.possible_states = states;
+        self.invalidate_cache();
+    }
+}
+
+impl TileInterface<TileState, Location2D> for Tile {
+    fn possible_states(&self) -> impl Iterator<Item = TileState> {
+        self.possible_states.iter().cloned()
+    }
+    fn possible_states_ref<'a>(&'a self) -> impl Iterator<Item = &'a TileState>
+    where
+        TileState: 'a,
+    {
+        self.possible_states.iter()
+    }
+
+    fn has_collapsed(&self) -> bool {
+        self.collapsed
+    }
+
+    fn collapse(&mut self, value: Option<TileState>) -> Option<TileState> {
+        let chosen_state = match value {
+            Some(value) => value,
+            None => {
+                let mut rng = rand::rng();
+                // TODO: Non-uniform sampling
+                self.possible_states().choose(&mut rng)?
+            }
+        };
+
+        self.set_possible_states(BTreeSet::from([chosen_state]));
+        Some(chosen_state)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn entropy_calculation_sanity() {
+        let tile_0_states = Tile::new(BTreeSet::from([]));
+        assert!(!tile_0_states.has_collapsed());
+        let tile_1_states = Tile::new(BTreeSet::from([1]));
+        assert!(tile_1_states.has_collapsed());
+        let tile_2_states = Tile::new(BTreeSet::from([1, 2]));
+        assert!(!tile_2_states.has_collapsed());
+        let tile_3_states = Tile::new(BTreeSet::from([1, 2, 3]));
+        assert!(!tile_3_states.has_collapsed());
+
+        // tiles with one state cannot be collapsed
+        assert_eq!(tile_1_states.calculate_entropy(), None);
+        // otherwise tiles with less states should have a lower entropy
+        // (at least with the naive entropy implementation)
+        assert!(
+            tile_0_states.calculate_entropy().unwrap() < tile_2_states.calculate_entropy().unwrap()
+        );
+        assert!(
+            tile_2_states.calculate_entropy().unwrap() < tile_3_states.calculate_entropy().unwrap()
+        );
+    }
 }

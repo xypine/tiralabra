@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use crate::{
-    tile::{TileInterface, simple::TileState},
+    tile::{TileState, interface::TileInterface},
     utils::space::{Direction, Direction2D, NEIGHBOUR_COUNT_2D},
 };
 

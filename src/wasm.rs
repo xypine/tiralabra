@@ -11,8 +11,8 @@ use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
     rules::RuleSet2D,
     tile::{
-        TileInterface,
-        simple::{Tile, TileState},
+        interface::TileInterface,
+        {Tile, TileState},
     },
     utils::space::{Direction2D, Location2D},
     wave_function_collapse::interface::{WaveFunctionCollapse, WaveFunctionCollapseInterruption},
