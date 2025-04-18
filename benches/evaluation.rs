@@ -1,7 +1,7 @@
 use aaltofunktionromautus::{
     grid::{constant_2d::ConstantSizeGrid2D, dynamic_2d::DynamicSizeGrid2D},
-    interface::WaveFunctionCollapse,
     utils::space::Location2D,
+    wave_function_collapse::interface::WaveFunctionCollapse,
 };
 use criterion::{Criterion, black_box};
 use criterion::{criterion_group, criterion_main};
