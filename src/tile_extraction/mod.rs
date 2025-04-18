@@ -1,4 +1,4 @@
-use crate::{interface::Direction, rules::RuleSet};
+use crate::{rules::RuleSet, utils::space::Direction};
 
 mod helpers;
 pub mod overlapping;

@@ -9,10 +9,13 @@ use wasm_bindgen::prelude::*;
 
 use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
-    interface::{TileInterface, WaveFunctionCollapse},
     rules::RuleSet2D,
-    tile::{Tile, TileState},
+    tile::{
+        TileInterface,
+        simple::{Tile, TileState},
+    },
     utils::space::{Direction2D, Location2D},
+    wave_function_collapse::interface::{WaveFunctionCollapse, WaveFunctionCollapseInterruption},
 };
 
 #[wasm_bindgen]
@@ -132,6 +135,14 @@ impl Grid {
         self.0.dump()
     }
 
+    pub fn get_history_len(&self) -> usize {
+        self.0.update_log.len()
+    }
+
+    pub fn dump_at_time(&self, t: usize) -> Vec<Tile> {
+        self.0.dump_at_time(t)
+    }
+
     pub fn is_finished(&self) -> bool {
         let uncollapsed_tile_exists = self
             .0
@@ -144,7 +155,7 @@ impl Grid {
     pub fn collapse(&mut self, x: usize, y: usize, value: Option<TileState>) -> Option<bool> {
         let result = self.0.collapse(Location2D { x, y }, value);
         let done = match result {
-            Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
+            Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,
             Ok(_) => false,
         };
@@ -154,7 +165,7 @@ impl Grid {
     pub fn tick(&mut self) -> Option<bool> {
         let result = self.0.tick();
         let done = match result {
-            Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
+            Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,
             Ok(_) => false,
         };
@@ -164,7 +175,7 @@ impl Grid {
     pub fn run(&mut self, max_iter: usize) -> Option<bool> {
         let result = self.0.run(max_iter);
         let done = match result {
-            Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => true,
+            Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,
             Ok(_) => false,
         };

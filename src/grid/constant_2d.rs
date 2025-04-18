@@ -7,14 +7,18 @@
 use std::collections::{BinaryHeap, HashMap};
 
 use crate::{
-    interface::{GridInterface, TileInterface},
     rules::RuleSet,
-    tile::{Tile, TileState},
+    tile::{
+        TileInterface,
+        simple::{Tile, TileState},
+    },
     utils::{
         entropy::EntropyHeapEntry,
         space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
 };
+
+use super::GridInterface;
 
 #[derive(Debug)]
 pub struct ConstantSizeGrid2D<const W: usize, const H: usize> {
@@ -118,6 +122,19 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         })
     }
 
+    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
+        let locations = self.get_neighbours(location);
+        std::array::from_fn(|index| {
+            let (direction, neighbour_location) = locations[index];
+            let neighbour = if let Some(neighbour_location) = neighbour_location {
+                self.get_tile(neighbour_location)
+            } else {
+                None
+            };
+            (direction, neighbour)
+        })
+    }
+
     fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
         if let Some(candidate) = self.entropy_heap.peek() {
             let current_version =
@@ -146,19 +163,6 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         Some(result)
     }
 
-    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
-        let locations = self.get_neighbours(location);
-        std::array::from_fn(|index| {
-            let (direction, neighbour_location) = locations[index];
-            let neighbour = if let Some(neighbour_location) = neighbour_location {
-                self.get_tile(neighbour_location)
-            } else {
-                None
-            };
-            (direction, neighbour)
-        })
-    }
-
     fn get_rules(&self) -> RuleSet<4, Direction2D> {
         self.rules.clone()
     }
@@ -167,8 +171,6 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
 #[cfg(test)]
 mod tests {
     use std::collections::{BTreeSet, HashSet};
-
-    use crate::interface::TileInterface;
 
     use super::*;
 

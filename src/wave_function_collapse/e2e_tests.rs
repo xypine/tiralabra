@@ -1,7 +1,8 @@
 use crate::{
-    grid::{constant_2d::ConstantSizeGrid2D, tests::assert_tile_state},
-    interface::{GridInterface, TileInterface, WaveFunctionCollapse},
+    grid::{GridInterface, constant_2d::ConstantSizeGrid2D, tests::assert_tile_state},
+    tile::TileInterface,
     utils::space::Location2D,
+    wave_function_collapse::interface::{WaveFunctionCollapse, WaveFunctionCollapseInterruption},
 };
 
 fn debug_print<const W: usize, const H: usize>(grid: &ConstantSizeGrid2D<W, H>) {
@@ -30,7 +31,7 @@ fn checkers_a() {
     let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
     let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_BLACK));
     match result {
-        Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => (),
+        Err(WaveFunctionCollapseInterruption::Finished) => (),
         Err(_) => result.unwrap(),
         Ok(_) => {}
     };
@@ -64,7 +65,7 @@ fn checkers_b() {
     let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
     let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_WHITE));
     match result {
-        Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => (),
+        Err(WaveFunctionCollapseInterruption::Finished) => (),
         Err(_) => result.unwrap(),
         Ok(_) => {}
     };
@@ -99,7 +100,7 @@ fn stripes() {
     let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
     let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_ONE));
     match result {
-        Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => (),
+        Err(WaveFunctionCollapseInterruption::Finished) => (),
         Err(_) => result.unwrap(),
         Ok(_) => {}
     };
@@ -134,7 +135,7 @@ fn flowers_a() {
     let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
     let result = grid.collapse(Location2D { x: 1, y: H - 1 }, Some(STATE_GROUND));
     match result {
-        Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => panic!(
+        Err(WaveFunctionCollapseInterruption::Finished) => panic!(
             "Collapsing a ground tile shouldn't have finished a 3x3 grid using the flowers ruleset"
         ),
         Err(_) => result.unwrap(),
@@ -169,7 +170,7 @@ fn terrain() {
     for _ in 0..((W * H) + 1) {
         let result = grid.tick();
         match result {
-            Err(crate::interface::WaveFunctionCollapseInterruption::Finished) => break,
+            Err(WaveFunctionCollapseInterruption::Finished) => break,
             Err(_) => result.unwrap(),
             Ok(_) => {}
         };

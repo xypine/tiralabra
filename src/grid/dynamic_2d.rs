@@ -7,14 +7,18 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use crate::{
-    interface::{GridInterface, TileInterface},
     rules::RuleSet,
-    tile::{Tile, TileState},
+    tile::{
+        TileInterface,
+        simple::{Tile, TileState},
+    },
     utils::{
         entropy::EntropyHeapEntry,
         space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
 };
+
+use super::GridInterface;
 
 #[derive(Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
@@ -224,8 +228,6 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
 #[cfg(test)]
 mod tests {
     use std::collections::{BTreeSet, HashSet};
-
-    use crate::interface::TileInterface;
 
     use super::*;
 

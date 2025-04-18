@@ -4,7 +4,9 @@ use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
 use tsify_next::{Tsify, declare};
 
-use crate::{interface::TileInterface, utils::space::Location2D};
+use crate::utils::space::Location2D;
+
+use super::TileInterface;
 
 /// Represents a possible state that any tile in the grid can be collapsed into
 // We can find a better representation later, for now we'll just use the output of the rust hasher

@@ -9,9 +9,8 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use crate::{
-    interface::{Direction, TileInterface},
-    tile::TileState,
-    utils::space::{Direction2D, NEIGHBOUR_COUNT_2D},
+    tile::{TileInterface, simple::TileState},
+    utils::space::{Direction, Direction2D, NEIGHBOUR_COUNT_2D},
 };
 
 /// Describes the tiles that can exist in the output and which ones can be next one another

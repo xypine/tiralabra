@@ -2,15 +2,20 @@
 
 #[cfg(test)]
 mod e2e_tests;
+pub mod interface;
 
 use std::collections::{BTreeSet, VecDeque};
 
+use interface::{
+    PropagateQueueEntry, TickResult, WaveFunctionCollapse, WaveFunctionCollapseInterruption,
+};
+
 use crate::{
-    interface::{
-        GridInterface, PropagateQueueEntry, TileInterface, WaveFunctionCollapse,
-        WaveFunctionCollapseInterruption,
+    grid::GridInterface,
+    tile::{
+        TileInterface,
+        simple::{Tile, TileState},
     },
-    tile::{Tile, TileState},
     utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
@@ -23,7 +28,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
         &mut self,
         position: Location2D,
         value: Option<TileState>,
-    ) -> Result<(), crate::interface::WaveFunctionCollapseInterruption<Location2D>> {
+    ) -> Result<(), WaveFunctionCollapseInterruption<Location2D>> {
         self.with_tile(position, |tile| tile.collapse(value))
             .flatten()
             .ok_or(WaveFunctionCollapseInterruption::Contradiction(position))?;
@@ -43,8 +48,8 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
 
     fn propagate(
         &mut self,
-        mut queue: VecDeque<crate::interface::PropagateQueueEntry<Location2D>>,
-    ) -> crate::interface::TickResult<Location2D> {
+        mut queue: VecDeque<PropagateQueueEntry<Location2D>>,
+    ) -> TickResult<Location2D> {
         while let Some(queue_entry) = queue.pop_front() {
             let delta = queue_entry
                 .target
@@ -87,7 +92,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
         Ok(())
     }
 
-    fn tick(&mut self) -> crate::interface::TickResult<Location2D> {
+    fn tick(&mut self) -> TickResult<Location2D> {
         let lowest_entropy = self
             .get_lowest_entropy_position()
             .ok_or(WaveFunctionCollapseInterruption::Finished::<Location2D>)?;

@@ -3,10 +3,14 @@
 use std::collections::{BTreeSet, HashSet};
 
 use crate::{
-    interface::{GridInterface, TileInterface},
-    tile::{Tile, TileState},
+    tile::{
+        TileInterface,
+        simple::{Tile, TileState},
+    },
     utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
+
+use super::GridInterface;
 
 fn id(position: Location2D, _w: usize, h: usize) -> TileState {
     (position.y * h + position.x) as u64
