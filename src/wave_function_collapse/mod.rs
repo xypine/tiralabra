@@ -142,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn propagation_race_condition_a_cw() {
+    fn propagation_race_condition_cw() {
         // With an incorrect implementation of the algorithm, we might end up in a situation where
         // we collapse a cell into an invalid state, as a previous collapse hasn't propagated this
         // far _yet_.
@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn propagation_race_condition_b() {
+    fn propagation_race_condition_ccw() {
         // see propagation_race_condition_a_cw
 
         const STATE_ONE: TileState = 1;

@@ -2,6 +2,7 @@
 //!
 //! Quite useful, as they allow it to work with multiple backing Grid or Tile implementations
 
+#[cfg(not(tarpaulin_include))] // the wasm bindings don't need to be unit tested
 pub mod wasm;
 
 use rand::Rng;
@@ -22,12 +23,8 @@ pub trait TileInterface<State, TCoords> {
     /// Returns an iterator over copies of possible states of the tile.
     fn possible_states(&self) -> impl Iterator<Item = State>;
 
-    // this is a naive implementation that only relies on the trait.
-    // As such, it is probably quite inefficient and should be overridden on the implementing
-    // struct
-    fn has_collapsed(&self) -> bool {
-        self.possible_states().count() == 1
-    }
+    /// Optimized version of `possible_states_ref.count() == 1`
+    fn has_collapsed(&self) -> bool;
 
     /// "Entropy" is used to pick the best tile to collapse
     /// Basically tiles with few remaining possible states should have low entropy

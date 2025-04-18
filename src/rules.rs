@@ -320,8 +320,6 @@ pub mod samples {
                 // Allow sky next to stem
                 (STATE_SKY, Direction2D::RIGHT, STATE_STEM),
                 (STATE_SKY, Direction2D::LEFT, STATE_STEM),
-                (STATE_SKY, Direction2D::RIGHT, STATE_BRANCH),
-                (STATE_SKY, Direction2D::LEFT, STATE_BRANCH),
                 (STATE_SKY, Direction2D::RIGHT, STATE_BRANCH_R),
                 (STATE_SKY, Direction2D::LEFT, STATE_CURVE_R),
                 (STATE_SKY, Direction2D::LEFT, STATE_BRANCH_L),
