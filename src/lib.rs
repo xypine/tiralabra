@@ -3,6 +3,7 @@ pub mod rules;
 pub mod tile;
 pub mod utils;
 
+pub mod backtracking;
 pub mod tile_extraction;
 pub mod wave_function_collapse;
 

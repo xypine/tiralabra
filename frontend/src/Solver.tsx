@@ -37,9 +37,40 @@ const Solver: Component<{
   const [state, setState] = createSignal<State | null>(null);
   const [tileSet, setTileSet] = createSignal<TileVisual[]>([]);
   const [tickActive, setTickActive] = createSignal(false);
+  const [timeTravelIndex, setTimeTravelIndex] = createSignal<
+    number | undefined
+  >(0);
+
   const tooLargeForTick = createMemo(() => {
     const dim = dimensions();
     return dim.width > 40 || dim.height > 40;
+  });
+
+  createEffect(() => {
+    const tti = timeTravelIndex();
+    const s = state();
+    if (tti !== undefined && s !== null && tti >= s.history_len) {
+      setTimeTravelIndex(undefined);
+    } else if (tti !== undefined && s !== null && tti !== s.history_position) {
+      postMessage({
+        type: "read_past",
+        t: tti,
+        dimensions: dimensions(),
+        rules: rules(),
+      });
+    } else if (
+      tti === undefined &&
+      s !== null &&
+      tti !== s.history_position &&
+      s.history_position !== s.history_len
+    ) {
+      postMessage({
+        type: "read_past",
+        t: s.history_len,
+        dimensions: dimensions(),
+        rules: rules(),
+      });
+    }
   });
 
   const [ruleCheckerState, setRuleCheckerState] = createSignal<
@@ -213,6 +244,30 @@ const Solver: Component<{
             <button onClick={() => run()}>complete</button>
             <button onClick={() => reset()}>reset</button>
           </fieldset>
+        </div>
+        <div>
+          <label>
+            time travel
+            <input
+              style={{
+                "min-width": "min(500px, 90vw)",
+              }}
+              type="range"
+              min={0}
+              max={state()?.history_len ?? 0}
+              disabled={
+                state() === null ||
+                tickActive() ||
+                (state()?.history_len ?? 0) < 2
+              }
+              value={timeTravelIndex() ?? state()?.history_len}
+              onInput={(e) => {
+                const v = +e.target.value;
+                console.debug("stti", { v });
+                setTimeTravelIndex(v);
+              }}
+            />
+          </label>
         </div>
       </div>
       <Show when={false}>

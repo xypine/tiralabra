@@ -13,6 +13,8 @@ console.log(`Worker ${worker_id} loaded`);
 
 export type State = {
   tiles: Tile[];
+  history_len: number;
+  history_position?: number;
 } & Dimensions;
 
 export const INBUILT_RULE_SETS = [
@@ -39,6 +41,10 @@ export type WorkerRequest = BaseSettings &
       }
     | {
         type: "run";
+      }
+    | {
+        type: "read_past";
+        t: number;
       }
     | {
         type: "collapse";
@@ -72,7 +78,7 @@ export type WorkerResponse = {
       }
   );
 
-function getRules(ruleset?: InbuiltRuleSet) {
+function getRules(ruleset: InbuiltRuleSet) {
   let rules;
   switch (ruleset) {
     case "terrain":
@@ -102,7 +108,12 @@ async function initWasm() {
   console.info("Web Assembly Loaded");
 }
 
-async function reset(dimensions: Dimensions, ruleset?: InbuiltRuleSet) {
+async function reset(
+  dimensions: Dimensions,
+  ruleset: InbuiltRuleSet,
+  cause: string,
+) {
+  console.info("reset", { dimensions, ruleset, cause });
   const rules = getRules(ruleset);
   const tileset = rules.get_visual_tileset();
   const grid = new Grid(rules, dimensions.width, dimensions.height);
@@ -121,23 +132,31 @@ async function usePersistentState(basics: BaseSettings) {
   let state = persistent_state;
   let was_reset = false;
   if (state === undefined) {
-    state = await reset(basics.dimensions, basics.rules);
+    state = await reset(basics.dimensions, basics.rules, "init");
     persistent_state = state;
     was_reset = true;
   }
   return { ...state, was_reset };
 }
 
-function state(s: PersistentState): State {
+function state(s: PersistentState, t?: number): State {
   const dimensions = s.grid.get_dimensions();
-  const tiles = s.grid.dump();
+  const history_len = s.grid.get_history_len();
+  let tiles;
+  if (t !== undefined) {
+    tiles = s.grid.dump_at_time(t);
+  } else {
+    tiles = s.grid.dump();
+  }
   return {
     ...dimensions,
     tiles,
+    history_len,
+    history_position: t === undefined ? undefined : t,
   };
 }
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  // console.log("Worker got message", e.data);
+  console.log("Worker got message", e.data);
 
   // wait until wasm has been loaded
   if (!initPromise) {
@@ -147,17 +166,22 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
 
   let s: PersistentStateUpdate = await usePersistentState(e.data);
 
-  if (s.grid.is_finished()) {
+  if (
+    s.grid.is_finished() &&
+    (
+      ["tick", "run", "collapse"] satisfies WorkerRequest["type"][] as string[]
+    ).includes(e.data.type)
+  ) {
     if (e.data.type === "tick") {
       console.info("persiting image or a bit");
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    s = await reset(e.data.dimensions, e.data.rules);
+    s = await reset(e.data.dimensions, e.data.rules, "grid was finished");
   }
 
   if (e.data.type === "reset") {
     if (!s.was_reset) {
-      s = await reset(e.data.dimensions, e.data.rules);
+      s = await reset(e.data.dimensions, e.data.rules, "requested");
     }
     const resp: WorkerResponse = {
       type: "state_update",
@@ -185,6 +209,12 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       type: "rule_check",
       allowed,
       state: state(s),
+    };
+    self.postMessage(resp);
+  } else if (e.data.type === "read_past") {
+    const resp: WorkerResponse = {
+      type: "state_update",
+      state: state(s, e.data.t),
     };
     self.postMessage(resp);
   } else {

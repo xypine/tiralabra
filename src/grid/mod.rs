@@ -17,8 +17,10 @@ pub trait GridInterface<
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
     T: TileInterface<TState, TPosition>,
->
+>: Sized
 {
+    fn reset(&mut self);
+
     /// Useful for visuals, might not be most performant
     fn image(&self) -> HashMap<TPosition, T>;
 

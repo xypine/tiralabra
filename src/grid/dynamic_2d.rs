@@ -147,6 +147,10 @@ impl DynamicSizeGrid2D {
 
 // See `GridInterface` for further documentation
 impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeGrid2D {
+    fn reset(&mut self) {
+        *self = Self::new(self.width, self.height, self.rules.clone())
+    }
+
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {
         let mut map = HashMap::new();
         for (i, tile) in self.tiles.iter().enumerate() {
@@ -179,6 +183,19 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         })
     }
 
+    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
+        let locations = self.get_neighbours(location);
+        std::array::from_fn(|index| {
+            let (direction, neighbour_location) = locations[index];
+            let neighbour = if let Some(neighbour_location) = neighbour_location {
+                self.get_tile(neighbour_location)
+            } else {
+                None
+            };
+            (direction, neighbour)
+        })
+    }
+
     fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
         if let Some(candidate) = self.entropy_heap.peek() {
             let candidate_index = self.location_to_index(candidate.location);
@@ -205,19 +222,6 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         // update the actual tile, updating the entropy heap if needed
         self.update_tile(location, mutable_copy)?;
         Some(result)
-    }
-
-    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
-        let locations = self.get_neighbours(location);
-        std::array::from_fn(|index| {
-            let (direction, neighbour_location) = locations[index];
-            let neighbour = if let Some(neighbour_location) = neighbour_location {
-                self.get_tile(neighbour_location)
-            } else {
-                None
-            };
-            (direction, neighbour)
-        })
     }
 
     fn get_rules(&self) -> RuleSet<4, Direction2D> {

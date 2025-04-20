@@ -12,17 +12,14 @@ use interface::{
 
 use crate::{
     grid::GridInterface,
-    tile::{
-        interface::TileInterface,
-        {Tile, TileState},
-    },
-    utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+    tile::{Tile, TileState, interface::TileInterface},
+    utils::space::{Direction, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
 // Implements the Wave Function Collapse algorithm for any struct that implements `GridInterface`
 // See the trait for further documentation about the methods
 impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>>
-    WaveFunctionCollapse<Location2D, TileState> for T
+    WaveFunctionCollapse<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile> for T
 {
     fn collapse(
         &mut self,
@@ -78,15 +75,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                 })
                 .expect("updating tile during propagation")?;
             if should_propagate {
-                let neighbours = self.get_neighbours(queue_entry.target);
-                for (_direction, npos) in neighbours {
-                    if let Some(neighbour_position) = npos {
-                        queue.push_back(PropagateQueueEntry {
-                            source: queue_entry.target,
-                            target: neighbour_position,
-                        });
-                    }
-                }
+                queue.extend(propagate_from_tile(self, queue_entry.target));
             }
         }
         Ok(())
@@ -101,6 +90,38 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
 
         Ok(())
     }
+}
+
+#[inline]
+pub fn propagate_from_tile<
+    const NEIGHBOURS_PER_TILE: usize,
+    TState,
+    TPosition: Copy,
+    TDirection,
+    TTile,
+    T,
+>(
+    grid: &T,
+    position: TPosition,
+) -> VecDeque<PropagateQueueEntry<TPosition>>
+where
+    TDirection: Direction<NEIGHBOURS_PER_TILE>,
+    TTile: TileInterface<TState, TPosition>,
+    T: WaveFunctionCollapse<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, TTile>,
+{
+    let mut queue = VecDeque::new();
+
+    let neighbours = grid.get_neighbours(position);
+    for (_direction, npos) in neighbours {
+        if let Some(neighbour_position) = npos {
+            queue.push_back(PropagateQueueEntry {
+                source: position,
+                target: neighbour_position,
+            });
+        }
+    }
+
+    queue
 }
 
 #[cfg(test)]

@@ -19,6 +19,7 @@ use super::{
 
 #[derive(Debug)]
 pub struct OverlappingBitmapExtractorOptions {
+    /// Extracted tiles are n ✖ n pixels
     pub n: usize,
     pub symmetry: usize,
     pub periodic_input: bool,

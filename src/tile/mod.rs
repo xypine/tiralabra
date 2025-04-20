@@ -1,3 +1,7 @@
+//! Simple tile implementation
+//!
+//! Possible states are stored in a BTreeSet
+
 pub mod interface;
 
 use std::collections::BTreeSet;
@@ -39,11 +43,6 @@ impl Tile {
 
         new
     }
-
-    pub fn set_possible_states(&mut self, states: BTreeSet<TileState>) {
-        self.possible_states = states;
-        self.invalidate_cache();
-    }
 }
 
 impl TileInterface<TileState, Location2D> for Tile {
@@ -61,6 +60,11 @@ impl TileInterface<TileState, Location2D> for Tile {
         self.collapsed
     }
 
+    fn set_possible_states<I: IntoIterator<Item = TileState>>(&mut self, states: I) {
+        self.possible_states = BTreeSet::from_iter(states);
+        self.invalidate_cache();
+    }
+
     fn collapse(&mut self, value: Option<TileState>) -> Option<TileState> {
         let chosen_state = match value {
             Some(value) => value,
@@ -71,7 +75,7 @@ impl TileInterface<TileState, Location2D> for Tile {
             }
         };
 
-        self.set_possible_states(BTreeSet::from([chosen_state]));
+        self.set_possible_states([chosen_state]);
         Some(chosen_state)
     }
 }

@@ -87,6 +87,10 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
 impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Direction2D, Tile>
     for ConstantSizeGrid2D<W, H>
 {
+    fn reset(&mut self) {
+        *self = Self::new(self.rules.clone())
+    }
+
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {
         let mut map = HashMap::new();
         for (x, col) in self.tiles.iter().enumerate() {

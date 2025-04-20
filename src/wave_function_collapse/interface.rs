@@ -6,6 +6,11 @@ use std::collections::VecDeque;
 
 use serde::Serialize;
 
+use crate::{
+    backtracking::Backtracker, grid::GridInterface, tile::interface::TileInterface,
+    utils::space::Direction,
+};
+
 /// Used when the algorithm has to return early for some reason
 #[derive(Debug, Clone, Copy, thiserror::Error, Serialize)]
 pub enum WaveFunctionCollapseInterruption<TPosition> {
@@ -29,7 +34,14 @@ pub struct PropagateQueueEntry<TPosition> {
 
 pub type TickResult<TPosition> = Result<(), WaveFunctionCollapseInterruption<TPosition>>;
 
-pub trait WaveFunctionCollapse<TPosition, TValue> {
+pub trait WaveFunctionCollapse<
+    const NEIGHBOURS_PER_TILE: usize,
+    TState,
+    TPosition,
+    TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
+    T: TileInterface<TState, TPosition>,
+>: GridInterface<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, T>
+{
     /// Forces a tile at the given position into one of it's possible states.
     /// If no value is provided, on is picked randomly.
     ///
@@ -37,7 +49,7 @@ pub trait WaveFunctionCollapse<TPosition, TValue> {
     fn collapse(
         &mut self,
         position: TPosition,
-        value: Option<TValue>,
+        value: Option<TState>,
     ) -> Result<(), WaveFunctionCollapseInterruption<TPosition>>;
 
     /// Propagates changes to a tile to it's neighbours, updating their possible states.
@@ -46,14 +58,30 @@ pub trait WaveFunctionCollapse<TPosition, TValue> {
         &mut self,
         queue: VecDeque<PropagateQueueEntry<TPosition>>,
     ) -> TickResult<TPosition>;
+
     fn tick(&mut self) -> TickResult<TPosition>;
 
     /// Runs the algorithm until all tiles have been collapsed, a contradiction occurs or a maximum
     /// amount of iterations is reached
     // automatically implemented for all types that implement WaveFunctionCollapse
-    fn run(&mut self, max_iterations: usize) -> TickResult<TPosition> {
+    fn run<B: Backtracker<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, T, Self>>(
+        &mut self,
+        max_iterations: usize,
+        mut backtracker: Option<B>,
+    ) -> TickResult<TPosition> {
         for _ in 0..max_iterations {
-            self.tick()?;
+            let result = self.tick();
+            match result {
+                Ok(()) => continue,
+                Err(WaveFunctionCollapseInterruption::Contradiction(e)) => {
+                    if let Some(handler) = backtracker.as_mut() {
+                        handler.contradiction_handler(self, e)?;
+                    } else {
+                        return Err(WaveFunctionCollapseInterruption::Contradiction(e));
+                    }
+                }
+                Err(e) => return Err(e),
+            }
         }
 
         // some tiles were left uncollapsed in the given time

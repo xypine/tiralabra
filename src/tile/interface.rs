@@ -33,4 +33,5 @@ pub trait TileInterface<State, TCoords> {
     /// If no value is provided, one is chosen from the currently available states.
     /// If no available states exist, `None` is returned
     fn collapse(&mut self, value: Option<State>) -> Option<State>;
+    fn set_possible_states<I: IntoIterator<Item = State>>(&mut self, states: I);
 }
