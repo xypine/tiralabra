@@ -245,29 +245,44 @@ const Solver: Component<{
             <button onClick={() => reset()}>reset</button>
           </fieldset>
         </div>
-        <div>
-          <label>
-            time travel
-            <input
+        <div
+          style={{
+            "margin-top": "0.5rem",
+            "font-size": "1rem",
+            "min-height": "2rem",
+          }}
+        >
+          <Show when={!tickActive() && state()?.history_len}>
+            <label
               style={{
-                "min-width": "min(500px, 90vw)",
+                display: "flex",
+                "justify-content": "center",
+                "align-items": "center",
+                gap: "0.5rem",
               }}
-              type="range"
-              min={0}
-              max={state()?.history_len ?? 0}
-              disabled={
-                state() === null ||
-                tickActive() ||
-                (state()?.history_len ?? 0) < 2
-              }
-              value={timeTravelIndex() ?? state()?.history_len}
-              onInput={(e) => {
-                const v = +e.target.value;
-                console.debug("stti", { v });
-                setTimeTravelIndex(v);
-              }}
-            />
-          </label>
+            >
+              time travel
+              <input
+                style={{
+                  "min-width": "min(500px, 90vw)",
+                }}
+                type="range"
+                min={0}
+                max={state()?.history_len ?? 0}
+                disabled={
+                  state() === null ||
+                  tickActive() ||
+                  (state()?.history_len ?? 0) < 2
+                }
+                value={timeTravelIndex() ?? state()?.history_len}
+                onInput={(e) => {
+                  const v = +e.target.value;
+                  console.debug("stti", { v });
+                  setTimeTravelIndex(v);
+                }}
+              />
+            </label>
+          </Show>
         </div>
       </div>
       <Show when={false}>
