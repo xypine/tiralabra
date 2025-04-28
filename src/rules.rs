@@ -1,7 +1,7 @@
 //! What tiles are allowed to exists and where
 
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     hash::Hash,
 };
 
@@ -22,6 +22,13 @@ pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     /// - A is allowed on the left side of B
     pub allowed: HashSet<(TileState, TDirection, TileState)>,
     pub state_representations: HashMap<TileState, String>,
+    /// Stores the prevalence of a state in the original pattern.
+    /// If a state is not in the map, it will have the weight "1"
+    pub weights: HashMap<TileState, usize>,
+    /// For example, if we want the floor of a 2D grid to be "Ground",
+    /// we would set Direction2D::DOWN -> STATE_GROUND
+    // We use a BTreeSet, as we want the iteration order to be deterministic
+    pub initialize_edges: BTreeMap<TDirection, TileState>,
 }
 
 pub type RuleSet2D = RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>;
@@ -32,7 +39,9 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
     pub fn new(
         possible: BTreeSet<TileState>,
         allowed: HashSet<(TileState, TDirection, TileState)>,
+        weights: HashMap<TileState, usize>,
         state_representations: HashMap<TileState, String>,
+        initialize_edges: BTreeMap<TDirection, TileState>,
     ) -> Self {
         let mut allowed_with_mirrored = HashSet::new();
         for entry in allowed {
@@ -43,7 +52,9 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
         Self {
             possible,
             allowed: allowed_with_mirrored,
+            weights,
             state_representations,
+            initialize_edges,
         }
     }
 
@@ -95,7 +106,7 @@ pub mod samples {
                 (STATE_BLACK, String::from("#000000")),
                 (STATE_WHITE, String::from("#FFFFFF")),
             ]);
-            RuleSet::new(possible, allowed, repr)
+            RuleSet::new(possible, allowed, HashMap::new(), repr, BTreeMap::new())
         }
     }
 
@@ -116,7 +127,13 @@ pub mod samples {
                 (STATE_TWO, Direction2D::DOWN, STATE_ONE),
                 (STATE_TWO, Direction2D::RIGHT, STATE_ONE),
             ]);
-            RuleSet::new(possible, allowed, HashMap::new())
+            RuleSet::new(
+                possible,
+                allowed,
+                HashMap::new(),
+                HashMap::new(),
+                BTreeMap::new(),
+            )
         }
     }
 
@@ -153,7 +170,7 @@ pub mod samples {
                 (STATE_SHORE, Direction2D::DOWN, STATE_LAND),
                 (STATE_SHORE, Direction2D::LEFT, STATE_LAND),
             ]);
-            RuleSet::new(possible, allowed, repr)
+            RuleSet::new(possible, allowed, HashMap::new(), repr, BTreeMap::new())
         }
     }
 
@@ -229,13 +246,16 @@ pub mod samples {
                 (STATE_FOREST, Direction2D::DOWN, STATE_FOREST2),
                 (STATE_FOREST, Direction2D::LEFT, STATE_FOREST2),
             ]);
-            RuleSet::new(possible, allowed, repr)
+            RuleSet::new(possible, allowed, HashMap::new(), repr, BTreeMap::new())
         }
     }
 
     pub mod flowers_singlepixel {
         use super::*;
         pub const STATE_GROUND: u64 = 0;
+        pub const STATE_EDGE_L: u64 = 10;
+        pub const STATE_EDGE_R: u64 = 11;
+        pub const STATE_EDGE_TOP: u64 = 12;
         pub const STATE_SOIL: u64 = 1;
         pub const STATE_SKY: u64 = 2;
         pub const STATE_STEM: u64 = 3;
@@ -257,11 +277,17 @@ pub mod samples {
                 STATE_FLOWER,
                 STATE_CURVE_L,
                 STATE_CURVE_R,
+                STATE_EDGE_L,
+                STATE_EDGE_R,
+                STATE_EDGE_TOP,
             ]);
             let repr = HashMap::from([
                 (STATE_GROUND, String::from("#000000")),
                 (STATE_SOIL, String::from("#250500")),
                 (STATE_SKY, String::from("#fff8dc")),
+                (STATE_EDGE_L, String::from("#000000")),
+                (STATE_EDGE_R, String::from("#000000")),
+                (STATE_EDGE_TOP, String::from("#000000")),
                 (STATE_STEM, String::from("#006400")),
                 (STATE_BRANCH, String::from("#008000")),
                 (STATE_BRANCH_L, String::from("#008000")),
@@ -274,8 +300,14 @@ pub mod samples {
                 // Allow ground next to ground
                 (STATE_GROUND, Direction2D::LEFT, STATE_GROUND),
                 (STATE_GROUND, Direction2D::RIGHT, STATE_GROUND),
+                (STATE_GROUND, Direction2D::LEFT, STATE_EDGE_L),
+                (STATE_GROUND, Direction2D::RIGHT, STATE_EDGE_R),
+                (STATE_GROUND, Direction2D::UP, STATE_EDGE_L),
+                (STATE_GROUND, Direction2D::UP, STATE_EDGE_R),
                 // Allow soil on top of ground
                 (STATE_SOIL, Direction2D::DOWN, STATE_GROUND),
+                (STATE_SOIL, Direction2D::LEFT, STATE_EDGE_L),
+                (STATE_SOIL, Direction2D::RIGHT, STATE_EDGE_R),
                 // Allow soil next to soil
                 (STATE_SOIL, Direction2D::LEFT, STATE_SOIL),
                 (STATE_SOIL, Direction2D::RIGHT, STATE_SOIL),
@@ -313,9 +345,19 @@ pub mod samples {
                 (STATE_SKY, Direction2D::DOWN, STATE_BRANCH),
                 (STATE_SKY, Direction2D::DOWN, STATE_CURVE_L),
                 (STATE_SKY, Direction2D::DOWN, STATE_CURVE_R),
+                (STATE_EDGE_TOP, Direction2D::DOWN, STATE_SKY),
                 // Allow sky next to sky
                 (STATE_SKY, Direction2D::DOWN, STATE_SKY),
                 (STATE_SKY, Direction2D::LEFT, STATE_SKY),
+                (STATE_SKY, Direction2D::LEFT, STATE_EDGE_L),
+                (STATE_SKY, Direction2D::RIGHT, STATE_EDGE_R),
+                (STATE_EDGE_L, Direction2D::DOWN, STATE_EDGE_L),
+                (STATE_EDGE_R, Direction2D::DOWN, STATE_EDGE_R),
+                (STATE_EDGE_L, Direction2D::UP, STATE_EDGE_TOP),
+                (STATE_EDGE_R, Direction2D::UP, STATE_EDGE_TOP),
+                (STATE_EDGE_TOP, Direction2D::LEFT, STATE_EDGE_TOP),
+                (STATE_EDGE_TOP, Direction2D::LEFT, STATE_EDGE_L),
+                (STATE_EDGE_TOP, Direction2D::RIGHT, STATE_EDGE_R),
                 // Allow sky next to stem
                 (STATE_SKY, Direction2D::RIGHT, STATE_STEM),
                 (STATE_SKY, Direction2D::LEFT, STATE_STEM),
@@ -326,7 +368,28 @@ pub mod samples {
                 (STATE_SKY, Direction2D::RIGHT, STATE_FLOWER),
                 (STATE_SKY, Direction2D::LEFT, STATE_FLOWER),
             ]);
-            RuleSet::new(possible, allowed, repr)
+            RuleSet::new(
+                possible,
+                allowed,
+                HashMap::from([
+                    // we don't want plant / ground ratio being too high
+                    (STATE_SOIL, 11),
+                    // sky has more weight to allow for some space between branches
+                    (STATE_SKY, 10),
+                    (STATE_FLOWER, 4),
+                    (STATE_BRANCH, 8),
+                    (STATE_CURVE_L, 3),
+                    (STATE_CURVE_R, 3),
+                ]),
+                repr,
+                // we precollapse the edges to keep branches inside the grid
+                BTreeMap::from([
+                    (Direction2D::DOWN, STATE_GROUND),
+                    (Direction2D::RIGHT, STATE_EDGE_R),
+                    (Direction2D::LEFT, STATE_EDGE_L),
+                    (Direction2D::UP, STATE_EDGE_TOP),
+                ]),
+            )
         }
     }
 }

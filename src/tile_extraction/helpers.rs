@@ -48,7 +48,7 @@ pub fn img_to_css_bg(image: DynamicImage) -> String {
         .expect("Failed to convert image to png");
     let res_base64 = base64::encode(&png);
 
-    format!("url('data:image/png;base64,{}')", res_base64)
+    format!("url('data:image/png;base64,{res_base64}')")
 }
 
 pub fn pattern_to_image(pattern: &[u32], n: usize) -> DynamicImage {

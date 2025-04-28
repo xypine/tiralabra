@@ -1,6 +1,8 @@
 //! Grid implementations and common test components for them
 
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
+
+use rand_chacha::ChaCha8Rng;
 
 use crate::{rules::RuleSet, tile::interface::TileInterface, utils::space::Direction};
 
@@ -13,12 +15,13 @@ pub mod tests;
 /// Dimension-agnostic container for tiles
 pub trait GridInterface<
     const NEIGHBOURS_PER_TILE: usize,
-    TState,
+    TState: Hash + Eq + Copy,
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
     T: TileInterface<TState, TPosition>,
 >: Sized
 {
+    /// should reset all tile states
     fn reset(&mut self);
 
     /// Useful for visuals, might not be most performant
@@ -45,9 +48,13 @@ pub trait GridInterface<
     fn get_lowest_entropy_position(&mut self) -> Option<TPosition>;
 
     /// Fetches the tile at the given location and gives you mutable access to it
-    fn with_tile<R, F: Fn(&mut T) -> R>(&mut self, location: TPosition, f: F) -> Option<R>;
+    fn with_tile<R, F: Fn(&mut T, &mut ChaCha8Rng) -> R>(
+        &mut self,
+        location: TPosition,
+        f: F,
+    ) -> Option<R>;
 
     /// Returns the rules associated with the grid. A grid must know the rules to initialize tiles
     /// correctly.
-    fn get_rules(&self) -> RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
+    fn get_rules(&self) -> &RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
 }

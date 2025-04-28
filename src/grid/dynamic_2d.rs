@@ -1,21 +1,21 @@
 //! A Grid that can be initialized at any size
 //!
 
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
 use crate::{
     rules::RuleSet,
-    tile::{
-        interface::TileInterface,
-        {Tile, TileState},
-    },
+    tile::{Tile, TileState, interface::TileInterface},
     utils::{
         entropy::EntropyHeapEntry,
         space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
+    wave_function_collapse::{interface::WaveFunctionCollapse, propagate_from_tile},
 };
 
 use super::GridInterface;
@@ -37,6 +37,8 @@ pub struct DynamicSizeGrid2D {
     entropy_invalidation_matrix: Vec<usize>,
     /// Keeps history of tile modifications for backtracking
     pub update_log: Vec<(Location2D, Tile)>,
+    /// Dictates random events
+    rng: ChaCha8Rng,
 }
 
 impl DynamicSizeGrid2D {
@@ -69,14 +71,16 @@ impl DynamicSizeGrid2D {
         let new_version = current_version + 1;
 
         self.entropy_invalidation_matrix[matrix_index] = new_version;
-        if let Some(new_entropy) = self.tiles[matrix_index].calculate_entropy() {
+        if let Some(new_entropy) =
+            self.tiles[matrix_index].calculate_entropy(&self.rules.weights, &mut self.rng)
+        {
             self.entropy_heap.push(EntropyHeapEntry {
                 location,
                 entropy: new_entropy,
                 version: new_version,
             });
         } else {
-            // no updated version is pushed, so it's impossible for the tile to be picked
+            // no updated version is pushed, so it becomes impossible for the tile to be picked
         }
     }
 
@@ -108,18 +112,45 @@ impl DynamicSizeGrid2D {
         width: usize,
         height: usize,
         rules: RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>,
+        rng_seed: u64,
     ) -> Self {
         let tiles = vec![Tile::new(rules.possible.clone()); width * height];
         let tile_invalidation_matrix = vec![0; width * height];
         let mut new = Self {
             width,
             height,
-            rules,
+            rules: rules.clone(),
             tiles,
             entropy_heap: BinaryHeap::new(),
             entropy_invalidation_matrix: tile_invalidation_matrix,
             update_log: Vec::new(),
+            rng: ChaCha8Rng::seed_from_u64(rng_seed),
         };
+
+        let mut initial_propagation_queue = VecDeque::new();
+        for (direction, tile_state) in &rules.initialize_edges {
+            let edge_tile_locations: Vec<_> = match Delta2D::from(*direction) {
+                Delta2D { x: dx, y: 0 } => {
+                    let x = if dx > 0 { width - 1 } else { 0 };
+                    (0..height).map(|y| Location2D { x, y }).collect()
+                }
+                Delta2D { x: 0, y: dy } => {
+                    let y = if dy > 0 { height - 1 } else { 0 };
+                    (0..width).map(|x| Location2D { x, y }).collect()
+                }
+                _ => unreachable!(),
+            };
+            for location in edge_tile_locations {
+                new.with_tile(location, |t, _| {
+                    t.set_possible_states([*tile_state]);
+                });
+                initial_propagation_queue.extend(propagate_from_tile(&new, location));
+            }
+        }
+
+        new.propagate(initial_propagation_queue).expect(
+            "Propagation got interrupted after an edge was collapsed, please revise your ruleset",
+        );
 
         for x in 0..width {
             for y in 0..height {
@@ -148,7 +179,12 @@ impl DynamicSizeGrid2D {
 // See `GridInterface` for further documentation
 impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeGrid2D {
     fn reset(&mut self) {
-        *self = Self::new(self.width, self.height, self.rules.clone())
+        *self = Self::new(
+            self.width,
+            self.height,
+            self.rules.clone(),
+            self.rng.random(),
+        )
     }
 
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {
@@ -215,23 +251,27 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         None
     }
 
-    fn with_tile<R, F: Fn(&mut Tile) -> R>(&mut self, location: Location2D, f: F) -> Option<R> {
+    fn with_tile<R, F: Fn(&mut Tile, &mut ChaCha8Rng) -> R>(
+        &mut self,
+        location: Location2D,
+        f: F,
+    ) -> Option<R> {
         // give the caller mutable access to a copied version of the tile
         let mut mutable_copy = self.get_tile(location)?;
-        let result = f(&mut mutable_copy);
+        let result = f(&mut mutable_copy, &mut self.rng);
         // update the actual tile, updating the entropy heap if needed
         self.update_tile(location, mutable_copy)?;
         Some(result)
     }
 
-    fn get_rules(&self) -> RuleSet<4, Direction2D> {
-        self.rules.clone()
+    fn get_rules(&self) -> &RuleSet<4, Direction2D> {
+        &self.rules
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeSet, HashSet};
+    use std::collections::{BTreeMap, BTreeSet, HashSet};
 
     use super::*;
 
@@ -252,8 +292,14 @@ mod tests {
 
     fn init_and_check(possible: BTreeSet<TileState>, w: usize, h: usize) -> DynamicSizeGrid2D {
         let allowed = HashSet::from([]);
-        let rules = RuleSet::new(possible, allowed, HashMap::new());
-        let grid = DynamicSizeGrid2D::new(w, h, rules);
+        let rules = RuleSet::new(
+            possible,
+            allowed,
+            HashMap::new(),
+            HashMap::new(),
+            BTreeMap::new(),
+        );
+        let grid = DynamicSizeGrid2D::new(w, h, rules, 0);
         assert_eq!(grid.tiles.len(), w * h);
 
         grid
@@ -348,5 +394,10 @@ mod tests {
         debug_print(&grid);
 
         crate::grid::tests::update_tiles_entropy(W, H, &mut grid);
+    }
+
+    #[test]
+    fn edge_initialization_2x2() {
+        crate::grid::tests::edges_2x2(|rules| DynamicSizeGrid2D::new(2, 2, rules, 0));
     }
 }

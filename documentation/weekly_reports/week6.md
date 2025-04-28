@@ -3,6 +3,9 @@
 - refactoring, added tile extraction, improved tests & documentation: ~4h
 - added code coverage, simple backtracking: ~5h
 - started testing documentation: ~20min
+- determinism: ~1h
+- shannon entropy: ~1h
+- interface changes for determinism, rule tweaks: ~1h
 
 2. How has the program progressed?
 
@@ -15,7 +18,6 @@
 
 5. What'll I do next?
 
-- shannon entropy calculation
 - different backtracking implementations
 - hone tests, documentation
 - add ui for tile extraction, shareable / reusable rules

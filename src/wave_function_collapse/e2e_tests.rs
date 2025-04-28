@@ -28,7 +28,7 @@ fn checkers_a() {
 
     let rules = crate::rules::samples::checkers::rules();
 
-    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
+    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules, 0);
     let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_BLACK));
     match result {
         Err(WaveFunctionCollapseInterruption::Finished) => (),
@@ -62,7 +62,7 @@ fn checkers_b() {
 
     let rules = crate::rules::samples::checkers::rules();
 
-    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
+    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules, 0);
     let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_WHITE));
     match result {
         Err(WaveFunctionCollapseInterruption::Finished) => (),
@@ -97,7 +97,7 @@ fn stripes() {
 
     let rules = crate::rules::samples::stripes::rules();
 
-    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
+    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules, 0);
     let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_ONE));
     match result {
         Err(WaveFunctionCollapseInterruption::Finished) => (),
@@ -127,12 +127,12 @@ fn stripes() {
 #[test]
 fn flowers_a() {
     use crate::rules::samples::flowers_singlepixel::STATE_GROUND;
-    const W: usize = 3;
-    const H: usize = 5;
+    const W: usize = 9;
+    const H: usize = 9;
 
     let rules = crate::rules::samples::flowers_singlepixel::rules();
 
-    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
+    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules, 0);
     let result = grid.collapse(Location2D { x: 1, y: H - 1 }, Some(STATE_GROUND));
     match result {
         Err(WaveFunctionCollapseInterruption::Finished) => panic!(
@@ -146,9 +146,14 @@ fn flowers_a() {
     for x in 0..W {
         for y in 0..H {
             let tile = grid.get_tile(Location2D { x, y }).unwrap();
-            if y == H - 1 {
+            if y < 2 || x < 2 || x > W - 3 {
+                assert!(tile.has_collapsed(), "all edge tiles should've collapsed")
+            } else if y == H - 1 {
                 assert_tile_state(&tile, STATE_GROUND);
             } else {
+                if tile.has_collapsed() {
+                    println!("{x}, {y} was collapsed!");
+                }
                 assert!(
                     !tile.has_collapsed(),
                     "only ground tiles should've collapsed"
@@ -165,7 +170,7 @@ fn terrain() {
 
     let rules = crate::rules::samples::terrain::rules();
 
-    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules);
+    let mut grid = ConstantSizeGrid2D::<W, H>::new(rules, 0);
     debug_print(&grid);
     for _ in 0..((W * H) + 1) {
         let result = grid.tick();

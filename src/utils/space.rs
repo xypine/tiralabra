@@ -14,7 +14,7 @@ pub trait Location<const DIMENSIONS: usize> {}
 /// Dimension-agnostic direction that can be mirrored
 ///
 /// used for finding neighbours of tiles
-pub trait Direction<const COUNT: usize>: Hash + Eq {
+pub trait Direction<const COUNT: usize>: Hash + Eq + Ord {
     fn mirror(self) -> Self;
 }
 
@@ -87,7 +87,9 @@ impl Sub<Delta2D> for Delta2D {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Tsify, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Tsify, Serialize, Deserialize,
+)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Direction2D {
     UP = 0,

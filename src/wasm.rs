@@ -1,7 +1,7 @@
 //! Interface and structures that can be used in the browser through Web Assembly
 //! TypeScript types are automatically generated using Tsify
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
@@ -39,18 +39,25 @@ impl Rules {
     pub fn new(
         possible: Vec<TileState>,
         allowed: Vec<RulePair>,
+        possible_weights: Vec<usize>,
         possible_repr: Vec<String>,
     ) -> Self {
         let mut repr = HashMap::new();
+        let mut weights = HashMap::new();
         for (i, state) in possible.iter().enumerate() {
             if let Some(state_repr) = possible_repr.get(i).cloned() {
                 repr.insert(*state, state_repr);
+            }
+            if let Some(state_weight) = possible_weights.get(i).cloned() {
+                weights.insert(*state, state_weight);
             }
         }
         let inner = RuleSet2D::new(
             BTreeSet::from_iter(possible),
             HashSet::from_iter(allowed.into_iter().map(|p| (p.0, p.1, p.2))),
+            weights,
             repr,
+            BTreeMap::new(),
         );
         Self(inner)
     }
@@ -117,8 +124,8 @@ pub struct Dimensions {
 #[wasm_bindgen]
 impl Grid {
     #[wasm_bindgen(constructor)]
-    pub fn new(rules: Rules, width: usize, height: usize) -> Self {
-        let inner = DynamicSizeGrid2D::new(width, height, rules.0);
+    pub fn new(rng_seed: u64, rules: Rules, width: usize, height: usize) -> Self {
+        let inner = DynamicSizeGrid2D::new(width, height, rules.0, rng_seed);
         Self(inner)
     }
 
@@ -161,9 +168,10 @@ impl Grid {
     }
 
     pub fn tick(&mut self) -> Option<bool> {
-        let result = self.0.tick();
+        let result = self.0.run(1, Some(BacktrackerByReset {}));
         let done = match result {
             Err(WaveFunctionCollapseInterruption::Finished) => true,
+            Err(WaveFunctionCollapseInterruption::MaxIterationsReached) => false,
             Err(_) => return None,
             Ok(_) => false,
         };
@@ -171,9 +179,7 @@ impl Grid {
     }
 
     pub fn run(&mut self, max_iter: usize) -> Option<bool> {
-        let result = self
-            .0
-            .run::<BacktrackerByReset>(max_iter, Some(BacktrackerByReset {}));
+        let result = self.0.run(max_iter, Some(BacktrackerByReset {}));
         let done = match result {
             Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,

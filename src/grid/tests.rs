@@ -1,12 +1,10 @@
 //! Common test helpers for grid-related tests
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use crate::{
-    tile::{
-        interface::TileInterface,
-        {Tile, TileState},
-    },
+    rules::RuleSet2D,
+    tile::{Tile, TileState, interface::TileInterface},
     utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
@@ -149,7 +147,7 @@ pub fn update_tiles_sanity<
         Location2D { x: w - 1, y: h - 1 },
     ] {
         let expected_initial = BTreeSet::from([0, 1, 2, 3]);
-        grid.with_tile(position, |t| {
+        grid.with_tile(position, |t, _| {
             t.set_possible_states(expected_initial.clone())
         });
         let impl_initial = BTreeSet::from_iter(
@@ -159,7 +157,7 @@ pub fn update_tiles_sanity<
         );
         assert_eq!(impl_initial, expected_initial);
         let expected_after_modification = BTreeSet::from([0, 1, 2]);
-        grid.with_tile(position, |t| {
+        grid.with_tile(position, |t, _| {
             t.set_possible_states(expected_after_modification.clone())
         });
         let impl_after_modification = BTreeSet::from_iter(
@@ -181,7 +179,7 @@ pub fn update_tiles_entropy<
     let initial = BTreeSet::from([2, 1, 6, 7, 4, 5]);
     for x in 0..w {
         for y in 0..h {
-            grid.with_tile(Location2D { x, y }, |t| {
+            grid.with_tile(Location2D { x, y }, |t, _| {
                 t.set_possible_states(initial.clone())
             });
         }
@@ -200,7 +198,7 @@ pub fn update_tiles_entropy<
     ] {
         let last_expected = expected.clone();
         expected.pop_last();
-        grid.with_tile(position, |t| t.set_possible_states(expected.clone()));
+        grid.with_tile(position, |t, _| t.set_possible_states(expected.clone()));
         assert_eq!(
             grid.get_lowest_entropy_position().expect(
                 "getting lowest entropy tile after a tile has been assigned a valid (>1) state"
@@ -209,7 +207,7 @@ pub fn update_tiles_entropy<
             "grid.get_lowest_entropy_position should've updated after a tile was updated with a lower entropy"
         );
         if let Some(last_position) = last {
-            grid.with_tile(last_position, |t| {
+            grid.with_tile(last_position, |t, _| {
                 t.set_possible_states(last_expected.clone())
             });
             assert_eq!(
@@ -221,5 +219,74 @@ pub fn update_tiles_entropy<
             );
         }
         last = Some(position);
+    }
+}
+
+pub fn edges_2x2<
+    T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>,
+    F,
+>(
+    init: F,
+) where
+    F: Fn(RuleSet2D) -> T,
+{
+    const STATE_A: TileState = 0;
+    const STATE_EDGE: TileState = 1;
+    const STATE_B: TileState = 2;
+
+    let generate_rules = |direction: Direction2D| {
+        RuleSet2D::new(
+            BTreeSet::from([STATE_A, STATE_EDGE, STATE_B]),
+            HashSet::from([
+                // identity, allow each state next to itself
+                (STATE_A, Direction2D::LEFT, STATE_A),
+                (STATE_A, Direction2D::UP, STATE_A),
+                (STATE_EDGE, Direction2D::LEFT, STATE_EDGE),
+                (STATE_EDGE, Direction2D::UP, STATE_EDGE),
+                (STATE_B, Direction2D::LEFT, STATE_B),
+                (STATE_B, Direction2D::UP, STATE_B),
+                // allow A next to EDGE
+                (STATE_A, Direction2D::UP, STATE_EDGE),
+                (STATE_A, Direction2D::RIGHT, STATE_EDGE),
+                (STATE_A, Direction2D::DOWN, STATE_EDGE),
+                (STATE_A, Direction2D::LEFT, STATE_EDGE),
+                // allow A next to B
+                (STATE_A, Direction2D::UP, STATE_B),
+                (STATE_A, Direction2D::RIGHT, STATE_B),
+                (STATE_A, Direction2D::DOWN, STATE_B),
+                (STATE_A, Direction2D::LEFT, STATE_B),
+            ]),
+            HashMap::new(),
+            HashMap::new(),
+            BTreeMap::from([(direction, STATE_EDGE)]),
+        )
+    };
+
+    let expected_data = [
+        (Direction2D::UP, [true, true, false, false]),
+        (Direction2D::RIGHT, [false, true, false, true]),
+        (Direction2D::DOWN, [false, false, true, true]),
+        (Direction2D::LEFT, [true, false, true, false]),
+    ];
+    let tile_mappings = [
+        Location2D { x: 0, y: 0 },
+        Location2D { x: 1, y: 0 },
+        Location2D { x: 0, y: 1 },
+        Location2D { x: 1, y: 1 },
+    ];
+
+    for (direction, expected_tile_states) in expected_data {
+        let grid = init(generate_rules(direction));
+        for (i, expected_state) in expected_tile_states.iter().enumerate() {
+            let tile_location = tile_mappings[i];
+            let tile = grid.get_tile(tile_location).expect("failed to get tile");
+            if *expected_state {
+                assert!(tile.has_collapsed());
+                assert_tile_state(&tile, STATE_EDGE);
+            } else {
+                // the collapse of the edge tiles should've removed B from possible states
+                assert_eq!(tile.possible_states_ref().count(), 2);
+            }
+        }
     }
 }

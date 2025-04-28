@@ -1,5 +1,7 @@
 pub mod reset;
 
+use std::hash::Hash;
+
 use crate::{
     tile::interface::TileInterface,
     utils::space::Direction,
@@ -8,7 +10,7 @@ use crate::{
 
 pub trait Backtracker<
     const NEIGHBOURS_PER_TILE: usize,
-    TState,
+    TState: Hash + Eq + Copy,
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
     T: TileInterface<TState, TPosition>,

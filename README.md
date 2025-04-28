@@ -9,7 +9,10 @@
 [Code documentation in a browsable format](https://tiralabra.eliaseskelinen.fi/docs/index.html) (the documentation is also in the code)
 
 [Requirements Document](./documentation/requirements.md)
+
 [Implementation Document](./documentation/implementation.md)
+
+[Testing Document](./documentation/testing.md)
 
 ### Weekly reports
 

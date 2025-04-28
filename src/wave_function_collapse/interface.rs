@@ -2,7 +2,7 @@
 //!
 //! Quite useful, as they allow it to work with multiple backing Grid or Tile implementations
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, hash::Hash};
 
 use serde::Serialize;
 
@@ -36,7 +36,7 @@ pub type TickResult<TPosition> = Result<(), WaveFunctionCollapseInterruption<TPo
 
 pub trait WaveFunctionCollapse<
     const NEIGHBOURS_PER_TILE: usize,
-    TState,
+    TState: Hash + Eq + Copy,
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
     T: TileInterface<TState, TPosition>,

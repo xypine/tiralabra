@@ -1,8 +1,16 @@
+use std::collections::HashMap;
+use std::hash::Hash;
+
 use rand::Rng;
 
 use crate::utils::entropy::Entropy;
 
-pub trait TileInterface<State, TCoords> {
+pub enum TileCollapseInstruction<'a, State, R: Rng> {
+    Predetermined(State),
+    Random(&'a mut R, &'a HashMap<State, usize>),
+}
+
+pub trait TileInterface<State: Hash + Eq + Copy, TCoords> {
     /// Returns an iterator over the possible states of the tile.
     /// No data is copied so the usage of this function should be quite efficient
     fn possible_states_ref<'a>(&'a self) -> impl Iterator<Item = &'a State>
@@ -17,21 +25,43 @@ pub trait TileInterface<State, TCoords> {
 
     /// "Entropy" is used to pick the best tile to collapse
     /// Basically tiles with few remaining possible states should have low entropy
-    fn calculate_entropy(&self) -> Option<Entropy> {
+    // automatically implemented for all types that implement TileInterface
+    #[inline]
+    fn calculate_entropy<R: Rng>(
+        &self,
+        weights: &HashMap<State, usize>,
+        rng: &mut R,
+    ) -> Option<Entropy> {
         if self.has_collapsed() {
             return None;
         }
-        // TODO: Replace with the actual entropy calculation
-        let possible = self.possible_states().count();
-        let entropy = possible as f64;
-        let mut rng = rand::rng();
-        let random = rng.random_range(0.0..0.2);
-        Some(Entropy(entropy + random))
+        let w: Vec<_> = self
+            .possible_states_ref()
+            .map(|s| weights.get(s).map(|&w| w as f64).unwrap_or(1.0))
+            .collect();
+
+        let sum: f64 = w.iter().sum();
+        if sum == 0.0 {
+            // No valid states
+            return Some(Entropy(0.0));
+        }
+
+        let term1 = sum.ln();
+        let term2 = w
+            .iter()
+            .filter(|&&wi| wi > 0.0)
+            .map(|&wi| wi * wi.ln())
+            .sum::<f64>()
+            / sum;
+
+        let entropy = term1 - term2;
+        let noise = rng.random::<f64>() * f64::EPSILON;
+        Some(Entropy(entropy + noise))
     }
 
     /// Forces the tile into a single state.
     /// If no value is provided, one is chosen from the currently available states.
     /// If no available states exist, `None` is returned
-    fn collapse(&mut self, value: Option<State>) -> Option<State>;
+    fn collapse<R: Rng>(&mut self, value: TileCollapseInstruction<State, R>) -> Option<State>;
     fn set_possible_states<I: IntoIterator<Item = State>>(&mut self, states: I);
 }

@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     hash::{DefaultHasher, Hash, Hasher},
 };
 
@@ -62,9 +62,11 @@ impl OverlappingBitmapExtractor {
 
         let mut repr = HashMap::new();
         let mut tilestate_to_pattern = HashMap::new();
+        let mut tilestate_to_weight = HashMap::new();
         let tile_states: Vec<TileState> = patterns
             .iter()
-            .map(|pattern| {
+            .enumerate()
+            .map(|(i, pattern)| {
                 let mut hasher = DefaultHasher::new();
                 pattern.hash(&mut hasher);
                 let hash = hasher.finish();
@@ -72,6 +74,7 @@ impl OverlappingBitmapExtractor {
                 let pattern_img = pattern_to_image(pattern, options.n);
                 let b64 = img_to_css_bg(pattern_img);
                 repr.insert(hash, b64);
+                tilestate_to_weight.insert(hash, weights[i]);
                 hash
             })
             .collect();
@@ -79,7 +82,13 @@ impl OverlappingBitmapExtractor {
         let allowed = Self::build_adjacency_set(&patterns, &tile_states, options.n);
 
         Self {
-            ruleset: RuleSet2D::new(BTreeSet::from_iter(tile_states), allowed, repr),
+            ruleset: RuleSet2D::new(
+                BTreeSet::from_iter(tile_states),
+                allowed,
+                tilestate_to_weight,
+                repr,
+                BTreeMap::new(),
+            ),
         }
     }
 
@@ -111,7 +120,7 @@ impl OverlappingBitmapExtractor {
         n: usize,
         symmetry: usize,
         periodic_input: bool,
-    ) -> (Vec<Vec<u32>>, Vec<f64>) {
+    ) -> (Vec<Vec<u32>>, Vec<usize>) {
         use std::collections::HashMap;
 
         let xmax = if periodic_input { width } else { width - n + 1 };
@@ -122,7 +131,7 @@ impl OverlappingBitmapExtractor {
         };
 
         let mut patterns: Vec<Vec<u32>> = Vec::new();
-        let mut weights: Vec<f64> = Vec::new();
+        let mut weights: Vec<usize> = Vec::new();
         let mut pattern_indices: HashMap<u64, usize> = HashMap::new();
 
         for y in 0..ymax {
@@ -153,12 +162,12 @@ impl OverlappingBitmapExtractor {
                     let p = &ps[k];
                     let h = hash(p);
                     if let Some(&index) = pattern_indices.get(&h) {
-                        weights[index] += 1.0;
+                        weights[index] += 1;
                     } else {
                         let index = weights.len();
                         pattern_indices.insert(h, index);
                         patterns.push(p.clone());
-                        weights.push(1.0);
+                        weights.push(1);
                     }
                 });
             }

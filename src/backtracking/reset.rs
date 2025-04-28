@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use crate::{
     tile::interface::TileInterface,
     utils::space::Direction,
@@ -10,7 +12,7 @@ pub struct BacktrackerByReset {}
 
 impl<
     const N: usize,
-    TState,
+    TState: Hash + Eq + Copy,
     TPosition: Copy,
     TDirection: Direction<N>,
     T: TileInterface<TState, TPosition>,

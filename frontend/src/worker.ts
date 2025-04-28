@@ -7,6 +7,7 @@ import initSync, {
   Direction2D,
   TileVisual,
 } from "aaltofunktionromautus";
+import { pickRandomSeed, Seed } from "./utils";
 
 const worker_id = Math.floor(Math.random() * 1000);
 console.log(`Worker ${worker_id} loaded`);
@@ -15,6 +16,7 @@ export type State = {
   tiles: Tile[];
   history_len: number;
   history_position?: number;
+  seed: number;
 } & Dimensions;
 
 export const INBUILT_RULE_SETS = [
@@ -29,6 +31,7 @@ export type InbuiltRuleSet = (typeof INBUILT_RULE_SETS)[number];
 export type BaseSettings = {
   dimensions: Dimensions;
   rules: InbuiltRuleSet;
+  seed: Seed;
 };
 
 export type WorkerRequest = BaseSettings &
@@ -109,6 +112,7 @@ async function initWasm() {
 }
 
 async function reset(
+  seed: number,
   dimensions: Dimensions,
   ruleset: InbuiltRuleSet,
   cause: string,
@@ -116,23 +120,29 @@ async function reset(
   console.info("reset", { dimensions, ruleset, cause });
   const rules = getRules(ruleset);
   const tileset = rules.get_visual_tileset();
-  const grid = new Grid(rules, dimensions.width, dimensions.height);
-  if (ruleset === "flowers_singlepixel") {
-    console.debug("collapsing ground");
-    grid.collapse(0, grid.get_dimensions().height - 1, BigInt(0));
-  }
-  persistent_state = { grid, tileset };
+  const grid = new Grid(
+    BigInt(seed),
+    rules,
+    dimensions.width,
+    dimensions.height,
+  );
+  persistent_state = { grid, tileset, seed };
   return persistent_state;
 }
 
-type PersistentState = { grid: Grid; tileset: TileVisual[] };
+type PersistentState = { grid: Grid; tileset: TileVisual[]; seed: number };
 type PersistentStateUpdate = PersistentState & { was_reset?: boolean };
 let persistent_state: PersistentState | undefined = undefined;
 async function usePersistentState(basics: BaseSettings) {
   let state = persistent_state;
   let was_reset = false;
   if (state === undefined) {
-    state = await reset(basics.dimensions, basics.rules, "init");
+    state = await reset(
+      basics.seed.value,
+      basics.dimensions,
+      basics.rules,
+      "init",
+    );
     persistent_state = state;
     was_reset = true;
   }
@@ -153,6 +163,7 @@ function state(s: PersistentState, t?: number): State {
     tiles,
     history_len,
     history_position: t === undefined ? undefined : t,
+    seed: s.seed,
   };
 }
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
@@ -165,6 +176,10 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   await initPromise;
 
   let s: PersistentStateUpdate = await usePersistentState(e.data);
+  let seedForReset = e.data.seed.value;
+  if (e.data.seed.allowRandomization && e.data.type !== "reset") {
+    seedForReset = pickRandomSeed();
+  }
 
   if (
     s.grid.is_finished() &&
@@ -176,12 +191,23 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       console.info("persiting image or a bit");
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    s = await reset(e.data.dimensions, e.data.rules, "grid was finished");
+
+    s = await reset(
+      seedForReset,
+      e.data.dimensions,
+      e.data.rules,
+      "grid was finished",
+    );
   }
 
   if (e.data.type === "reset") {
     if (!s.was_reset) {
-      s = await reset(e.data.dimensions, e.data.rules, "requested");
+      s = await reset(
+        seedForReset,
+        e.data.dimensions,
+        e.data.rules,
+        "requested",
+      );
     }
     const resp: WorkerResponse = {
       type: "state_update",
@@ -240,7 +266,7 @@ async function run(data: WorkerRequest, s: PersistentStateUpdate) {
     throw new Error("Unexpected message type");
   }
   const dimensions = s.grid.get_dimensions();
-  s.grid.run(dimensions.width * dimensions.height);
+  s.grid.run(dimensions.width * dimensions.height * 100);
   const resp: WorkerResponse = {
     type: "state_update",
     state: state(s),

@@ -3,7 +3,9 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  on,
   onCleanup,
+  onMount,
   Show,
   type Component,
 } from "solid-js";
@@ -23,6 +25,8 @@ import type {
 import Worker from "./worker?worker";
 import Map from "./Map";
 import RulesetDebug from "./RulesetDebug";
+import { pickRandomSeed } from "./utils";
+import { untrack } from "solid-js/web";
 
 export type VisualGrid = Map<Location2D, Tile>;
 
@@ -34,6 +38,8 @@ const Solver: Component<{
   dimensions: Accessor<Dimensions>;
   rules: Accessor<InbuiltRuleSet>;
 }> = ({ dimensions, rules }) => {
+  const [randomSeed, setRandomSeed] = createSignal<boolean>(true);
+  const [seed, setSeed] = createSignal<number>(pickRandomSeed());
   const [state, setState] = createSignal<State | null>(null);
   const [tileSet, setTileSet] = createSignal<TileVisual[]>([]);
   const [tickActive, setTickActive] = createSignal(false);
@@ -57,6 +63,10 @@ const Solver: Component<{
         t: tti,
         dimensions: dimensions(),
         rules: rules(),
+        seed: {
+          allowRandomization: randomSeed(),
+          value: seed(),
+        },
       });
     } else if (
       tti === undefined &&
@@ -69,6 +79,10 @@ const Solver: Component<{
         t: s.history_len,
         dimensions: dimensions(),
         rules: rules(),
+        seed: {
+          allowRandomization: randomSeed(),
+          value: seed(),
+        },
       });
     }
   });
@@ -85,6 +99,9 @@ const Solver: Component<{
       let data: WorkerResponse = event.data;
       // console.debug("ui got message", { data });
       let newState = data.state;
+      if (newState.seed !== seed()) {
+        setSeed(newState.seed);
+      }
       let newTileSet = data.tileset;
       if (data.type === "tick_update") {
         const res = data.result;
@@ -114,10 +131,20 @@ const Solver: Component<{
     setWaitingForWorker(true);
     worker().postMessage(msg);
   };
-  createEffect(() => {
+
+  onMount(() => {
     console.debug("init");
-    reset();
     createT(8);
+    reset(dimensions(), rules(), seed(), randomSeed());
+  });
+
+  createMemo(() => {
+    console.debug("reset (dimensions / rules changed)");
+    const d = dimensions();
+    const r = rules();
+    untrack(() => {
+      reset(dimensions(), rules(), seed(), randomSeed());
+    });
   });
 
   const tiles = () => {
@@ -137,11 +164,21 @@ const Solver: Component<{
     return arr;
   };
 
-  function reset(activate = false) {
+  function reset(
+    d: Dimensions,
+    r: InbuiltRuleSet,
+    seed: number,
+    allowRandomization: boolean,
+    activate = false,
+  ) {
     postMessage({
       type: "reset",
-      dimensions: dimensions(),
-      rules: rules(),
+      dimensions: d,
+      rules: r,
+      seed: {
+        allowRandomization,
+        value: seed,
+      },
     });
     setTickActive(activate);
   }
@@ -150,6 +187,10 @@ const Solver: Component<{
       type: "tick",
       dimensions: dimensions(),
       rules: rules(),
+      seed: {
+        allowRandomization: randomSeed(),
+        value: seed(),
+      },
     });
   }
   function collapse(x: number, y: number, state?: number) {
@@ -160,6 +201,10 @@ const Solver: Component<{
       x,
       y,
       state,
+      seed: {
+        allowRandomization: randomSeed(),
+        value: seed(),
+      },
     });
   }
   function run() {
@@ -168,6 +213,10 @@ const Solver: Component<{
       type: "run",
       dimensions: dimensions(),
       rules: rules(),
+      seed: {
+        allowRandomization: randomSeed(),
+        value: seed(),
+      },
     });
   }
 
@@ -242,7 +291,11 @@ const Solver: Component<{
             disabled={tickActive() || waitingForWorker()}
           >
             <button onClick={() => run()}>complete</button>
-            <button onClick={() => reset()}>reset</button>
+            {/* <button */}
+            {/*   onClick={() => reset(dimensions(), rules(), seed(), randomSeed())} */}
+            {/* > */}
+            {/*   reset */}
+            {/* </button> */}
           </fieldset>
         </div>
         <div
@@ -259,6 +312,7 @@ const Solver: Component<{
                 "justify-content": "center",
                 "align-items": "center",
                 gap: "0.5rem",
+                "flex-wrap": "wrap",
               }}
             >
               time travel
@@ -285,6 +339,51 @@ const Solver: Component<{
           </Show>
         </div>
       </div>
+      <div
+        style={{
+          display: "flex",
+          "flex-direction": "column",
+          "font-size": "1rem",
+          gap: "0.2rem",
+        }}
+      >
+        <label
+          style={{
+            display: "flex",
+            "flex-direction": "column",
+            gap: "0.2rem",
+          }}
+        >
+          random seed
+          <input
+            type="checkbox"
+            checked={randomSeed()}
+            onChange={(e) => setRandomSeed(e.target.checked)}
+          />
+        </label>
+        <label
+          style={{
+            display: "flex",
+            "flex-direction": "column",
+            gap: "0.2rem",
+          }}
+        >
+          seed
+          <input
+            type="number"
+            value={seed()}
+            disabled={randomSeed()}
+            onChange={(e) => {
+              const val = e.target.value;
+              let valn = val ? +val : undefined;
+              if (valn) {
+                setSeed(valn);
+                reset(dimensions(), rules(), valn, false);
+              }
+            }}
+          />
+        </label>
+      </div>
       <Show when={false}>
         <RulesetDebug
           postMessage={postMessage}
@@ -293,6 +392,10 @@ const Solver: Component<{
           baseSettings={() => ({
             rules: rules(),
             dimensions: dimensions(),
+            seed: {
+              allowRandomization: randomSeed(),
+              value: seed(),
+            },
           })}
         />
       </Show>

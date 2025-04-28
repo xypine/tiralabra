@@ -6,8 +6,11 @@ pub mod interface;
 
 use std::collections::BTreeSet;
 
-use interface::TileInterface;
-use rand::seq::IteratorRandom;
+use interface::{TileCollapseInstruction, TileInterface};
+use rand::{
+    Rng,
+    distr::{Distribution, weighted::WeightedIndex},
+};
 use serde::{Deserialize, Serialize};
 use tsify_next::{Tsify, declare};
 
@@ -65,13 +68,20 @@ impl TileInterface<TileState, Location2D> for Tile {
         self.invalidate_cache();
     }
 
-    fn collapse(&mut self, value: Option<TileState>) -> Option<TileState> {
+    fn collapse<R: Rng>(
+        &mut self,
+        value: TileCollapseInstruction<TileState, R>,
+    ) -> Option<TileState> {
         let chosen_state = match value {
-            Some(value) => value,
-            None => {
-                let mut rng = rand::rng();
-                // TODO: Non-uniform sampling
-                self.possible_states().choose(&mut rng)?
+            TileCollapseInstruction::Predetermined(value) => value,
+            TileCollapseInstruction::Random(rng, weights) => {
+                let w: Vec<_> = self
+                    .possible_states_ref()
+                    .map(|s| weights.get(s).map(|&w| w as f64).unwrap_or(1.0))
+                    .collect();
+                let dist = WeightedIndex::new(w).unwrap();
+                let chosen_index = dist.sample(rng);
+                self.possible_states().skip(chosen_index).next()?
             }
         };
 
@@ -82,6 +92,8 @@ impl TileInterface<TileState, Location2D> for Tile {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
@@ -93,17 +105,43 @@ mod tests {
         let tile_2_states = Tile::new(BTreeSet::from([1, 2]));
         assert!(!tile_2_states.has_collapsed());
         let tile_3_states = Tile::new(BTreeSet::from([1, 2, 3]));
-        assert!(!tile_3_states.has_collapsed());
+        let tile_4_states_massive_weight = Tile::new(BTreeSet::from([1, 2, 3, 4]));
+        assert!(!tile_4_states_massive_weight.has_collapsed());
+
+        let mut rng = rand::rng();
+        let weights = HashMap::from([(4, 1000)]);
 
         // tiles with one state cannot be collapsed
-        assert_eq!(tile_1_states.calculate_entropy(), None);
+        assert_eq!(tile_1_states.calculate_entropy(&weights, &mut rng), None);
         // otherwise tiles with less states should have a lower entropy
         // (at least with the naive entropy implementation)
         assert!(
-            tile_0_states.calculate_entropy().unwrap() < tile_2_states.calculate_entropy().unwrap()
+            tile_0_states
+                .calculate_entropy(&weights, &mut rng)
+                .expect("tile with 0 states should have zero entropy")
+                < tile_2_states
+                    .calculate_entropy(&weights, &mut rng)
+                    .expect("tile with 2 states should have some entropy"),
+            "tile with 0 states should have a lower entropy than one with 2 states"
         );
         assert!(
-            tile_2_states.calculate_entropy().unwrap() < tile_3_states.calculate_entropy().unwrap()
+            tile_2_states
+                .calculate_entropy(&weights, &mut rng)
+                .expect("tile with 0 states should have zero entropy")
+                < tile_3_states
+                    .calculate_entropy(&weights, &mut rng)
+                    .expect("tile with 2 states should have some entropy"),
+            "tile with 2 states should have a lower entropy than one with 3 states"
+        );
+
+        assert!(
+            tile_4_states_massive_weight
+                .calculate_entropy(&weights, &mut rng)
+                .expect("tile with 0 states should have zero entropy")
+                < tile_2_states
+                    .calculate_entropy(&weights, &mut rng)
+                    .expect("tile with 2 states should have some entropy"),
+            "tile with 4 states (one having massive weight) should have a lower entropy than one with 2 states (but low weight)"
         );
     }
 }

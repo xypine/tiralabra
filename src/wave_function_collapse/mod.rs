@@ -4,7 +4,10 @@
 mod e2e_tests;
 pub mod interface;
 
-use std::collections::{BTreeSet, VecDeque};
+use std::{
+    collections::{BTreeSet, VecDeque},
+    hash::Hash,
+};
 
 use interface::{
     PropagateQueueEntry, TickResult, WaveFunctionCollapse, WaveFunctionCollapseInterruption,
@@ -12,7 +15,10 @@ use interface::{
 
 use crate::{
     grid::GridInterface,
-    tile::{Tile, TileState, interface::TileInterface},
+    tile::{
+        Tile, TileState,
+        interface::{TileCollapseInstruction, TileInterface},
+    },
     utils::space::{Direction, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
@@ -26,9 +32,16 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
         position: Location2D,
         value: Option<TileState>,
     ) -> Result<(), WaveFunctionCollapseInterruption<Location2D>> {
-        self.with_tile(position, |tile| tile.collapse(value))
-            .flatten()
-            .ok_or(WaveFunctionCollapseInterruption::Contradiction(position))?;
+        let weights = self.get_rules().weights.clone();
+        self.with_tile(position, |tile, rng| {
+            let instruction = match value {
+                None => TileCollapseInstruction::Random(rng, &weights),
+                Some(value) => TileCollapseInstruction::Predetermined(value),
+            };
+            tile.collapse(instruction)
+        })
+        .flatten()
+        .ok_or(WaveFunctionCollapseInterruption::Contradiction(position))?;
 
         let neighbours = self.get_neighbours(position);
         let initial_queue =
@@ -59,7 +72,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                 .expect("getting propagation source");
             let rules = self.get_rules().clone();
             let should_propagate = self
-                .with_tile(queue_entry.target, |target| {
+                .with_tile(queue_entry.target, |target, _| {
                     let old_states: BTreeSet<_> = target.possible_states().collect();
                     let checked_states = rules.check(target, &source, direction);
                     if checked_states.is_empty() {
@@ -95,7 +108,7 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
 #[inline]
 pub fn propagate_from_tile<
     const NEIGHBOURS_PER_TILE: usize,
-    TState,
+    TState: Hash + Eq + Copy,
     TPosition: Copy,
     TDirection,
     TTile,
@@ -126,7 +139,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeSet, HashMap, HashSet};
+    use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
     use crate::{
         grid::constant_2d::ConstantSizeGrid2D,
@@ -139,8 +152,14 @@ mod tests {
     fn find_lowest_entropy_sanity() {
         const W: usize = 2;
         const H: usize = 2;
-        let rules = RuleSet::new(BTreeSet::from([1, 2, 3]), HashSet::from([]), HashMap::new());
-        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
+        let rules = RuleSet::new(
+            BTreeSet::from([1, 2, 3]),
+            HashSet::from([]),
+            HashMap::new(),
+            HashMap::new(),
+            BTreeMap::new(),
+        );
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules, 0);
 
         let lowest_entropy_location = Location2D { x: 0, y: 1 };
         assert_eq!(
@@ -151,7 +170,7 @@ mod tests {
             3
         );
 
-        grid.with_tile(lowest_entropy_location, |t| {
+        grid.with_tile(lowest_entropy_location, |t, _| {
             t.set_possible_states(BTreeSet::from([1, 2]))
         });
 
@@ -185,11 +204,13 @@ mod tests {
                 (STATE_THREE, Direction2D::LEFT, STATE_FOUR),
             ]),
             HashMap::new(),
+            HashMap::new(),
+            BTreeMap::new(),
         );
 
         const W: usize = 2;
         const H: usize = 2;
-        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules, 0);
         let result = grid.collapse(Location2D { x: 0, y: 0 }, Some(STATE_ONE));
 
         assert!(
@@ -213,11 +234,13 @@ mod tests {
                 (STATE_THREE, Direction2D::RIGHT, STATE_FOUR),
             ]),
             HashMap::new(),
+            HashMap::new(),
+            BTreeMap::new(),
         );
 
         const W: usize = 2;
         const H: usize = 2;
-        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules);
+        let mut grid: ConstantSizeGrid2D<W, H> = ConstantSizeGrid2D::new(rules, 0);
         let result = grid.collapse(Location2D { x: 1, y: 1 }, Some(STATE_ONE));
 
         assert!(
