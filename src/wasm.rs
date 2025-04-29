@@ -12,7 +12,10 @@ use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
     rules::RuleSet2D,
     tile::{Tile, TileState, interface::TileInterface},
-    utils::space::{Direction2D, Location2D},
+    utils::{
+        render::CanvasRenderable,
+        space::s2d::{Direction2D, Location2D},
+    },
     wave_function_collapse::interface::{WaveFunctionCollapse, WaveFunctionCollapseInterruption},
 };
 
@@ -27,7 +30,7 @@ impl RulePair {
 }
 
 #[derive(Tsify, Serialize, Deserialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, large_number_types_as_bigints)]
 pub struct TileVisual(TileState, Option<String>);
 
 #[wasm_bindgen]
@@ -40,7 +43,7 @@ impl Rules {
         possible: Vec<TileState>,
         allowed: Vec<RulePair>,
         possible_weights: Vec<usize>,
-        possible_repr: Vec<String>,
+        possible_repr: Vec<u32>,
     ) -> Self {
         let mut repr = HashMap::new();
         let mut weights = HashMap::new();
@@ -80,8 +83,22 @@ impl Rules {
         self.0
             .possible
             .iter()
-            .map(|state| (state, self.0.visualize_tile(*state).cloned()))
-            .map(|(state, v)| TileVisual(*state, v))
+            .map(|state| (state, self.0.visualize_tile(*state)))
+            .map(|(state, color)| {
+                let v = color.map(|color| {
+                    let a = ((color >> 24) & 0xFF) as u8;
+                    let r = ((color >> 16) & 0xFF) as u8;
+                    let g = ((color >> 8) & 0xFF) as u8;
+                    let b = (color & 0xFF) as u8;
+                    if a == 255 {
+                        format!("rgb({r},{g},{b})")
+                    } else {
+                        let alpha = (a as f32) / 255.0;
+                        format!("rgba({r},{g},{b},{alpha:.3})")
+                    }
+                });
+                TileVisual(*state, v)
+            })
             .collect()
     }
 
@@ -109,6 +126,12 @@ impl Rules {
         let inner = crate::rules::samples::flowers_singlepixel::rules();
         Self(inner)
     }
+
+    pub fn flowers() -> Self {
+        let inner: RuleSet2D = serde_json::from_str(include_str!("../rules.json"))
+            .expect("failed to parse prebuilt rules.json");
+        Self(inner)
+    }
 }
 
 #[wasm_bindgen]
@@ -125,6 +148,7 @@ pub struct Dimensions {
 impl Grid {
     #[wasm_bindgen(constructor)]
     pub fn new(rng_seed: u64, rules: Rules, width: usize, height: usize) -> Self {
+        console_error_panic_hook::set_once();
         let inner = DynamicSizeGrid2D::new(width, height, rules.0, rng_seed);
         Self(inner)
     }
@@ -134,6 +158,10 @@ impl Grid {
             width: self.0.width,
             height: self.0.height,
         }
+    }
+
+    pub fn render(&self, w: usize, h: usize) -> String {
+        self.0.render(w, h)
     }
 
     pub fn dump(&self) -> Vec<Tile> {

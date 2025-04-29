@@ -5,7 +5,9 @@ use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 
-use crate::utils::space::Location2D;
+use crate::utils::space::s2d::Location2D;
+
+use super::space::s1d::Location1D;
 
 // comparisons can fail for floating point numbers if one of the entropies is "NaN"
 // praise the IEEC
@@ -36,6 +38,26 @@ impl PartialOrd for EntropyHeapEntry {
 }
 
 impl Ord for EntropyHeapEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.entropy.cmp(&other.entropy)
+    }
+}
+
+#[derive(Debug, Eq, Clone, Copy, PartialEq, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct EntropyHeapEntry1D {
+    pub location: Location1D,
+    pub entropy: Entropy,
+    pub version: usize,
+}
+
+impl PartialOrd for EntropyHeapEntry1D {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.entropy.cmp(&other.entropy))
+    }
+}
+
+impl Ord for EntropyHeapEntry1D {
     fn cmp(&self, other: &Self) -> Ordering {
         self.entropy.cmp(&other.entropy)
     }

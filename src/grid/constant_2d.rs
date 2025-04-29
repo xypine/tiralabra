@@ -14,7 +14,7 @@ use crate::{
     tile::{Tile, TileState, interface::TileInterface},
     utils::{
         entropy::EntropyHeapEntry,
-        space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+        space::s2d::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
     wave_function_collapse::{interface::WaveFunctionCollapse, propagate_from_tile},
 };
@@ -37,7 +37,7 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
     fn update_tile(&mut self, location: Location2D, state: Tile) -> Option<()> {
         let current_state = self.get_tile(location)?;
 
-        if state == current_state {
+        if state == *current_state {
             // no update needed
             return Some(());
         }
@@ -119,6 +119,10 @@ impl<const W: usize, const H: usize> ConstantSizeGrid2D<W, H> {
 impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Direction2D, Tile>
     for ConstantSizeGrid2D<W, H>
 {
+    fn get_dimensions(&self) -> Location2D {
+        Location2D { x: W, y: H }
+    }
+
     fn reset(&mut self) {
         *self = Self::new(self.rules.clone(), self.rng.random())
     }
@@ -134,11 +138,10 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         map
     }
 
-    fn get_tile(&self, location: Location2D) -> Option<Tile> {
+    fn get_tile(&self, location: Location2D) -> Option<&Tile> {
         self.tiles
             .get(location.x)
             .and_then(|col| col.get(location.y))
-            .cloned()
     }
 
     fn get_neighbours(&self, location: Location2D) -> [(Direction2D, Option<Location2D>); 4] {
@@ -158,7 +161,7 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         })
     }
 
-    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
+    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<&Tile>); 4] {
         let locations = self.get_neighbours(location);
         std::array::from_fn(|index| {
             let (direction, neighbour_location) = locations[index];
@@ -196,7 +199,7 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         f: F,
     ) -> Option<R> {
         // give the caller mutable access to a copied version of the tile
-        let mut mutable_copy = self.get_tile(location)?;
+        let mut mutable_copy = self.get_tile(location)?.clone();
         let result = f(&mut mutable_copy, &mut self.rng);
         // update the actual tile, updating the entropy heap if needed
         self.update_tile(location, mutable_copy)?;

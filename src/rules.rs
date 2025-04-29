@@ -10,7 +10,11 @@ use tsify_next::Tsify;
 
 use crate::{
     tile::{TileState, interface::TileInterface},
-    utils::space::{Direction, Direction2D, NEIGHBOUR_COUNT_2D},
+    utils::space::{
+        Direction,
+        s1d::{Direction1D, NEIGHBOUR_COUNT_1D},
+        s2d::{Direction2D, NEIGHBOUR_COUNT_2D},
+    },
 };
 
 /// Describes the tiles that can exist in the output and which ones can be next one another
@@ -21,7 +25,8 @@ pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
     /// - B is allowed on the right side of A
     /// - A is allowed on the left side of B
     pub allowed: HashSet<(TileState, TDirection, TileState)>,
-    pub state_representations: HashMap<TileState, String>,
+    // TileState -> Any 32bit color
+    pub state_representations: HashMap<TileState, u32>,
     /// Stores the prevalence of a state in the original pattern.
     /// If a state is not in the map, it will have the weight "1"
     pub weights: HashMap<TileState, usize>,
@@ -32,6 +37,7 @@ pub struct RuleSet<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS>> {
 }
 
 pub type RuleSet2D = RuleSet<NEIGHBOUR_COUNT_2D, Direction2D>;
+pub type RuleSet1D = RuleSet<NEIGHBOUR_COUNT_1D, Direction1D>;
 
 impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Copy>
     RuleSet<NEIGHBOURS, TDirection>
@@ -40,7 +46,7 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
         possible: BTreeSet<TileState>,
         allowed: HashSet<(TileState, TDirection, TileState)>,
         weights: HashMap<TileState, usize>,
-        state_representations: HashMap<TileState, String>,
+        state_representations: HashMap<TileState, u32>,
         initialize_edges: BTreeMap<TDirection, TileState>,
     ) -> Self {
         let mut allowed_with_mirrored = HashSet::new();
@@ -60,7 +66,7 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
 
     /// Removes possible tile states for `target`,
     /// given that it has a neighbour `source` in `direction`
-    pub fn check<TCoords, T: TileInterface<TileState, TCoords>>(
+    pub fn check<T: TileInterface<TileState>>(
         &self,
         target: &T,
         source: &T,
@@ -80,9 +86,9 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
         checked_possible
     }
 
-    /// Returns a value accepted by the css "background" property
-    pub fn visualize_tile(&self, state: TileState) -> Option<&String> {
-        self.state_representations.get(&state)
+    /// Returns a 32bit color
+    pub fn visualize_tile(&self, state: TileState) -> Option<u32> {
+        self.state_representations.get(&state).cloned()
     }
 }
 
@@ -102,10 +108,7 @@ pub mod samples {
                 (STATE_BLACK, Direction2D::DOWN, STATE_WHITE),
                 (STATE_BLACK, Direction2D::LEFT, STATE_WHITE),
             ]);
-            let repr = HashMap::from([
-                (STATE_BLACK, String::from("#000000")),
-                (STATE_WHITE, String::from("#FFFFFF")),
-            ]);
+            let repr = HashMap::from([(STATE_BLACK, 0xff000000), (STATE_WHITE, 0xFFFFFFFF)]);
             RuleSet::new(possible, allowed, HashMap::new(), repr, BTreeMap::new())
         }
     }
@@ -131,7 +134,11 @@ pub mod samples {
                 possible,
                 allowed,
                 HashMap::new(),
-                HashMap::new(),
+                HashMap::from([
+                    (STATE_ONE, 0xffff0000),
+                    (STATE_MIDDLE, 0xff00ff00),
+                    (STATE_TWO, 0xff0000ff),
+                ]),
                 BTreeMap::new(),
             )
         }
@@ -148,9 +155,9 @@ pub mod samples {
         pub fn rules() -> RuleSet2D {
             let possible = BTreeSet::from([STATE_SEA, STATE_SHORE, STATE_LAND]);
             let repr = HashMap::from([
-                (STATE_SEA, String::from("#0000ff")),
-                (STATE_SHORE, String::from("#fff8dc")),
-                (STATE_LAND, String::from("#008000")),
+                (STATE_SEA, 0xff0000ff),
+                (STATE_SHORE, 0xfffff8dc),
+                (STATE_LAND, 0xff008000),
             ]);
             let allowed = HashSet::from([
                 // identity rules, allow x next to x
@@ -196,13 +203,13 @@ pub mod samples {
                 STATE_FOREST2,
             ]);
             let repr = HashMap::from([
-                (STATE_DEEP_SEA2, String::from("#000071")),
-                (STATE_DEEP_SEA, String::from("#00008b")),
-                (STATE_SEA, String::from("#0000ff")),
-                (STATE_SHORE, String::from("#fff8dc")),
-                (STATE_LAND, String::from("#008000")),
-                (STATE_FOREST, String::from("#006400")),
-                (STATE_FOREST2, String::from("#005b00")),
+                (STATE_DEEP_SEA2, 0xff000071),
+                (STATE_DEEP_SEA, 0xff00008b),
+                (STATE_SEA, 0xff0000ff),
+                (STATE_SHORE, 0xfffff8dc),
+                (STATE_LAND, 0xff008000),
+                (STATE_FOREST, 0xff006400),
+                (STATE_FOREST2, 0xff005b00),
             ]);
             let allowed = HashSet::from([
                 // identity rules, allow x next to x
@@ -282,19 +289,19 @@ pub mod samples {
                 STATE_EDGE_TOP,
             ]);
             let repr = HashMap::from([
-                (STATE_GROUND, String::from("#000000")),
-                (STATE_SOIL, String::from("#250500")),
-                (STATE_SKY, String::from("#fff8dc")),
-                (STATE_EDGE_L, String::from("#000000")),
-                (STATE_EDGE_R, String::from("#000000")),
-                (STATE_EDGE_TOP, String::from("#000000")),
-                (STATE_STEM, String::from("#006400")),
-                (STATE_BRANCH, String::from("#008000")),
-                (STATE_BRANCH_L, String::from("#008000")),
-                (STATE_BRANCH_R, String::from("#008000")),
-                (STATE_FLOWER, String::from("#ffbb55")),
-                (STATE_CURVE_L, String::from("#006400")),
-                (STATE_CURVE_R, String::from("#006400")),
+                (STATE_GROUND, 0xff000000),
+                (STATE_SOIL, 0xff250500),
+                (STATE_SKY, 0xfffff8dc),
+                (STATE_EDGE_L, 0xff000000),
+                (STATE_EDGE_R, 0xff000000),
+                (STATE_EDGE_TOP, 0xff000000),
+                (STATE_STEM, 0xff006400),
+                (STATE_BRANCH, 0xff008000),
+                (STATE_BRANCH_L, 0xff008000),
+                (STATE_BRANCH_R, 0xff008000),
+                (STATE_FLOWER, 0xffffbb55),
+                (STATE_CURVE_L, 0xff006400),
+                (STATE_CURVE_R, 0xff006400),
             ]);
             let allowed = HashSet::from([
                 // Allow ground next to ground

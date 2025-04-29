@@ -10,7 +10,7 @@ pub enum TileCollapseInstruction<'a, State, R: Rng> {
     Random(&'a mut R, &'a HashMap<State, usize>),
 }
 
-pub trait TileInterface<State: Hash + Eq + Copy, TCoords> {
+pub trait TileInterface<State: Hash + Eq + Copy> {
     /// Returns an iterator over the possible states of the tile.
     /// No data is copied so the usage of this function should be quite efficient
     fn possible_states_ref<'a>(&'a self) -> impl Iterator<Item = &'a State>

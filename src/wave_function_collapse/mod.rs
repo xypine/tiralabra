@@ -19,7 +19,10 @@ use crate::{
         Tile, TileState,
         interface::{TileCollapseInstruction, TileInterface},
     },
-    utils::space::{Direction, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+    utils::space::{
+        Direction,
+        s2d::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+    },
 };
 
 // Implements the Wave Function Collapse algorithm for any struct that implements `GridInterface`
@@ -69,7 +72,8 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
                 Direction2D::try_from(delta).expect("converting propagate delta to direction");
             let source = self
                 .get_tile(queue_entry.source)
-                .expect("getting propagation source");
+                .expect("getting propagation source")
+                .clone();
             let rules = self.get_rules().clone();
             let should_propagate = self
                 .with_tile(queue_entry.target, |target, _| {
@@ -119,7 +123,7 @@ pub fn propagate_from_tile<
 ) -> VecDeque<PropagateQueueEntry<TPosition>>
 where
     TDirection: Direction<NEIGHBOURS_PER_TILE>,
-    TTile: TileInterface<TState, TPosition>,
+    TTile: TileInterface<TState>,
     T: WaveFunctionCollapse<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, TTile>,
 {
     let mut queue = VecDeque::new();

@@ -1,3 +1,5 @@
+//! Two dimensional space
+
 use std::{
     hash::Hash,
     num::TryFromIntError,
@@ -8,15 +10,7 @@ use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use tsify_next::declare;
 
-/// Dimension-agnostic Location
-pub trait Location<const DIMENSIONS: usize> {}
-
-/// Dimension-agnostic direction that can be mirrored
-///
-/// used for finding neighbours of tiles
-pub trait Direction<const COUNT: usize>: Hash + Eq + Ord {
-    fn mirror(self) -> Self;
-}
+use super::{Direction, Location};
 
 pub const AXIS_2D: usize = 2;
 pub const NEIGHBOUR_COUNT_2D: usize = 2 * AXIS_2D;

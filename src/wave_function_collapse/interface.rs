@@ -39,7 +39,7 @@ pub trait WaveFunctionCollapse<
     TState: Hash + Eq + Copy,
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
-    T: TileInterface<TState, TPosition>,
+    T: TileInterface<TState>,
 >: GridInterface<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, T>
 {
     /// Forces a tile at the given position into one of it's possible states.

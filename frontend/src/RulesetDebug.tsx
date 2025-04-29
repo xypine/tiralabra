@@ -11,11 +11,12 @@ import {
 import { TileVisual } from "./Map";
 
 const Debugger: Component<{
+  possible_states: Accessor<TileState[]>;
   baseSettings: Accessor<BaseSettings>;
   state: Accessor<TileState[] | undefined>;
   setState: Setter<TileState[] | undefined>;
   postMessage: (msg: WorkerRequest) => void;
-}> = ({ postMessage, state, setState, baseSettings }) => {
+}> = ({ possible_states, postMessage, state, setState, baseSettings }) => {
   const [from, setFrom] = createSignal<number[]>([]);
   const [target, setTarget] = createSignal<number[]>([]);
   const [dir, setDir] = createSignal<Direction2D>("UP");
@@ -36,73 +37,101 @@ const Debugger: Component<{
   return (
     <div
       style={{
-        display: "flex",
-        "flex-direction": "column",
-        padding: "1rem",
-        gap: "0.5rem",
+        "font-size": "1rem",
+        "--tile-w": "2rem",
+        "--tile-h": "2rem",
       }}
     >
-      <label>
-        current
-        <input
-          value={target().join(", ")}
-          onChange={(e) => {
-            setTarget(
-              e.target.value
-                .split(",")
-                .flatMap((v) => (v.trim().length ? +v : [])),
-            );
-          }}
-        />
-      </label>
-      <label>
-        direction
-        <select
-          value={dir()}
-          onChange={(e) => setDir(e.target.value as Direction2D)}
-        >
-          <option value={"UP"}>up</option>
-          <option value={"RIGHT"}>right</option>
-          <option value={"DOWN"}>down</option>
-          <option value={"LEFT"}>left</option>
-        </select>
-      </label>
-      <label>
-        neighbour
-        <input
-          value={from().join(", ")}
-          onChange={(e) => {
-            setFrom(
-              e.target.value
-                .split(",")
-                .flatMap((v) => (v.trim().length ? +v : [])),
-            );
-          }}
-        />
-      </label>
       <div
         style={{
-          "--tile-w": "1rem",
-          "--tile-h": "1rem",
+          padding: ".2rem",
+          "max-width": "min(75vw, 800px)",
           display: "flex",
-          gap: "0.5rem",
-          "justify-content": "center",
-          "align-items": "center",
-          padding: "1rem",
+          "flex-wrap": "wrap",
+          gap: ".2rem",
         }}
       >
-        <For each={state() ?? []}>
+        <For each={possible_states()}>
           {(state) => (
-            <div title={state + ""}>
-              <TileVisual
-                x={0}
-                y={0}
-                onTileClick={() => {}}
-                tile={() => ({ collapsed: true, possible_states: [state] })}
-              />
-            </div>
+            <TileVisual
+              x={0}
+              y={0}
+              onTileClick={() => {}}
+              onTileRightClick={() => {}}
+              tile={() => ({ collapsed: true, possible_states: [state] })}
+            />
           )}
         </For>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          "flex-direction": "column",
+          padding: "1rem",
+          gap: "0.5rem",
+        }}
+      >
+        <label>
+          current
+          <input
+            value={target().join(", ")}
+            onChange={(e) => {
+              setTarget(
+                e.target.value
+                  .split(",")
+                  .flatMap((v) => (v.trim().length ? +v : [])),
+              );
+            }}
+          />
+        </label>
+        <label>
+          direction
+          <select
+            value={dir()}
+            onChange={(e) => setDir(e.target.value as Direction2D)}
+          >
+            <option value={"UP"}>up</option>
+            <option value={"RIGHT"}>right</option>
+            <option value={"DOWN"}>down</option>
+            <option value={"LEFT"}>left</option>
+          </select>
+        </label>
+        <label>
+          neighbour
+          <input
+            value={from().join(", ")}
+            onChange={(e) => {
+              setFrom(
+                e.target.value
+                  .split(",")
+                  .flatMap((v) => (v.trim().length ? +v : [])),
+              );
+            }}
+          />
+        </label>
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            "justify-content": "center",
+            "align-items": "center",
+            padding: "1rem",
+          }}
+        >
+          <For each={state() ?? []}>
+            {(state) => (
+              <div title={state + ""}>
+                <TileVisual
+                  x={0}
+                  y={0}
+                  onTileClick={() => {}}
+                  onTileRightClick={() => {}}
+                  tile={() => ({ collapsed: true, possible_states: [state] })}
+                />
+              </div>
+            )}
+          </For>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 use crate::{rules::RuleSet, utils::space::Direction};
 
 mod helpers;
-pub mod overlapping;
+pub mod overlapping_bitmap;
+// pub mod overlapping_text;
 
 pub trait TileExtractor<
     const NEIGHBOURS_PER_TILE: usize,

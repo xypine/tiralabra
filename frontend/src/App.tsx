@@ -46,6 +46,7 @@ const App: Component = () => {
             >
               <option value="terrain">terrain</option>
               <option value="flowers_singlepixel">flowers</option>
+              <option value="flowers">flowers 2</option>
               <option value="terrain_simple">terrain simple</option>
               <option value="checkers">checkers</option>
               <option value="stripes">stripes</option>

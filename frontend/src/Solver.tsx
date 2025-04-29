@@ -23,7 +23,7 @@ import type {
   WorkerResponse,
 } from "./worker";
 import Worker from "./worker?worker";
-import Map from "./Map";
+import Map, { TileSetContext } from "./Map";
 import RulesetDebug from "./RulesetDebug";
 import { pickRandomSeed } from "./utils";
 import { untrack } from "solid-js/web";
@@ -33,6 +33,8 @@ export type VisualGrid = Map<Location2D, Tile>;
 function locationToIndex(location: Location2D, width: number): number {
   return location.y * width + location.x;
 }
+
+const SOLVE_DELAY = 0 as const;
 
 const Solver: Component<{
   dimensions: Accessor<Dimensions>;
@@ -134,8 +136,7 @@ const Solver: Component<{
 
   onMount(() => {
     console.debug("init");
-    createT(8);
-    reset(dimensions(), rules(), seed(), randomSeed());
+    createT(SOLVE_DELAY);
   });
 
   createMemo(() => {
@@ -143,26 +144,26 @@ const Solver: Component<{
     const d = dimensions();
     const r = rules();
     untrack(() => {
-      reset(dimensions(), rules(), seed(), randomSeed());
+      reset(d, r, seed(), randomSeed());
     });
   });
 
-  const tiles = () => {
-    const s = state();
-    if (!s) {
-      return null;
-    }
-    let arr = [];
-    for (let x = -1; x++, x < s.width; ) {
-      let buffer = [];
-      for (let y = -1; y++, y < s.height; ) {
-        const t = s.tiles[locationToIndex({ x, y }, s.width)];
-        buffer.push(t);
-      }
-      arr.push(buffer);
-    }
-    return arr;
-  };
+  // const tiles = () => {
+  //   const s = state();
+  //   if (!s) {
+  //     return null;
+  //   }
+  //   let arr = [];
+  //   for (let x = -1; x++, x < s.width; ) {
+  //     let buffer = [];
+  //     for (let y = -1; y++, y < s.height; ) {
+  //       const t = s.tiles[locationToIndex({ x, y }, s.width)];
+  //       buffer.push(t);
+  //     }
+  //     arr.push(buffer);
+  //   }
+  //   return arr;
+  // };
 
   function reset(
     d: Dimensions,
@@ -193,7 +194,7 @@ const Solver: Component<{
       },
     });
   }
-  function collapse(x: number, y: number, state?: number) {
+  function collapse(x: number, y: number, state?: bigint) {
     postMessage({
       type: "collapse",
       dimensions: dimensions(),
@@ -226,7 +227,7 @@ const Solver: Component<{
   }
   function t() {
     function next() {
-      createT(8);
+      createT(SOLVE_DELAY);
     }
     if (!tickActive() || waitingForWorker()) {
       return next();
@@ -241,36 +242,36 @@ const Solver: Component<{
   });
 
   return (
-    <>
+    <TileSetContext tileset={tileSet}>
       <div>
-        <Map
-          width={() => state()?.width ?? 0}
-          height={() => state()?.height ?? 0}
-          tiles={() => tiles() ?? []}
-          tileset={tileSet}
-          onTileClick={(x, y) => {
-            console.debug({ x, y });
-            collapse(x, y);
-          }}
-          onTileRightClick={(x, y) => {
-            const s = state();
-            if (!s) {
-              return;
-            }
-            const possible =
-              s.tiles[locationToIndex({ x, y }, s.width)].possible_states;
-            const chosen = prompt(
-              "which state? Possible: " + possible.join(", "),
-            );
-            if (chosen) {
-              const asNum = +chosen;
-              if (possible.includes(asNum)) {
-                console.debug({ x, y, chosen });
-                collapse(x, y, asNum);
-              }
-            }
-          }}
-        />
+        {/* <Map */}
+        {/*   width={() => state()?.width ?? 0} */}
+        {/*   height={() => state()?.height ?? 0} */}
+        {/*   tiles={() => tiles() ?? []} */}
+        {/*   onTileClick={(x, y) => { */}
+        {/*     console.debug({ x, y }); */}
+        {/*     collapse(x, y); */}
+        {/*   }} */}
+        {/*   onTileRightClick={(x, y) => { */}
+        {/*     const s = state(); */}
+        {/*     if (!s) { */}
+        {/*       return; */}
+        {/*     } */}
+        {/*     const possible = s.tiles[locationToIndex({ x, y }, s.width)] */}
+        {/*       .possible_states as unknown as bigint[]; */}
+        {/*     const chosen = prompt( */}
+        {/*       "which state? Possible: " + possible.join(", "), */}
+        {/*     ); */}
+        {/*     if (chosen) { */}
+        {/*       const asNum = BigInt(chosen); */}
+        {/*       if (possible.includes(asNum)) { */}
+        {/*         console.debug({ x, y, chosen }); */}
+        {/*         collapse(x, y, asNum); */}
+        {/*       } */}
+        {/*     } */}
+        {/*   }} */}
+        {/* /> */}
+        <div innerHTML={state()?.rendered} />
         <div
           style={{
             "margin-top": "1.5rem",
@@ -384,8 +385,9 @@ const Solver: Component<{
           />
         </label>
       </div>
-      <Show when={false}>
+      <Show when={true}>
         <RulesetDebug
+          possible_states={() => tileSet().map(([v]) => v)}
           postMessage={postMessage}
           state={ruleCheckerState}
           setState={setRuleCheckerState}
@@ -399,7 +401,7 @@ const Solver: Component<{
           })}
         />
       </Show>
-    </>
+    </TileSetContext>
   );
 };
 

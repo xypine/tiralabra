@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use crate::{
     rules::RuleSet2D,
     tile::{Tile, TileState, interface::TileInterface},
-    utils::space::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+    utils::space::s2d::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
 };
 
 use super::GridInterface;

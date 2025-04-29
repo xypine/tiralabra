@@ -9,12 +9,12 @@ use crate::{
     rules::RuleSet2D,
     tile::TileState,
     tile_extraction::helpers::{hash, pattern, reflect, rotate},
-    utils::space::{Direction2D, NEIGHBOUR_COUNT_2D},
+    utils::space::s2d::{Direction2D, NEIGHBOUR_COUNT_2D},
 };
 
 use super::{
     TileExtractor,
-    helpers::{edges_match, img_to_css_bg, pattern_to_image},
+    helpers::{edges_match, img_to_repr, pattern_to_image},
 };
 
 #[derive(Debug)]
@@ -72,7 +72,7 @@ impl OverlappingBitmapExtractor {
                 let hash = hasher.finish();
                 tilestate_to_pattern.insert(hash, pattern.clone());
                 let pattern_img = pattern_to_image(pattern, options.n);
-                let b64 = img_to_css_bg(pattern_img);
+                let b64 = img_to_repr(pattern_img, options.n);
                 repr.insert(hash, b64);
                 tilestate_to_weight.insert(hash, weights[i]);
                 hash
@@ -252,31 +252,31 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_css_representation_format() {
-        let img = simple_image(2, |x, y| {
-            let val = (x + y) * 50;
-            [val as u8, val as u8, val as u8, 255]
-        });
-
-        let options = OverlappingBitmapExtractorOptions {
-            n: 2,
-            symmetry: 1,
-            periodic_input: false,
-        };
-
-        let extractor = OverlappingBitmapExtractor::new(img, options);
-        let reprs = extractor.get_rules().state_representations.clone();
-
-        for (_, css) in reprs.iter() {
-            assert!(
-                css.starts_with("url('data:image/png;base64,"),
-                "CSS background should start with base64 header"
-            );
-            assert!(
-                css.ends_with("')"),
-                "CSS background should end with closing quotes and parentheses"
-            );
-        }
-    }
+    // #[test]
+    // fn test_css_representation_format() {
+    //     let img = simple_image(2, |x, y| {
+    //         let val = (x + y) * 50;
+    //         [val as u8, val as u8, val as u8, 255]
+    //     });
+    //
+    //     let options = OverlappingBitmapExtractorOptions {
+    //         n: 2,
+    //         symmetry: 1,
+    //         periodic_input: false,
+    //     };
+    //
+    //     let extractor = OverlappingBitmapExtractor::new(img, options);
+    //     let reprs = extractor.get_rules().state_representations.clone();
+    //
+    //     for (_, css) in reprs.iter() {
+    //         assert!(
+    //             css.starts_with("url('data:image/png;base64,"),
+    //             "CSS background should start with base64 header"
+    //         );
+    //         assert!(
+    //             css.ends_with("')"),
+    //             "CSS background should end with closing quotes and parentheses"
+    //         );
+    //     }
+    // }
 }

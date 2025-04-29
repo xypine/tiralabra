@@ -14,8 +14,6 @@ use rand::{
 use serde::{Deserialize, Serialize};
 use tsify_next::{Tsify, declare};
 
-use crate::utils::space::Location2D;
-
 /// Represents a possible state that any tile in the grid can be collapsed into
 // We can find a better representation later, for now we'll just use the output of the rust hasher
 // trait
@@ -23,7 +21,7 @@ use crate::utils::space::Location2D;
 pub type TileState = u64;
 
 #[derive(Debug, Clone, PartialEq, Tsify, Serialize, Deserialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(into_wasm_abi, from_wasm_abi, large_number_types_as_bigints)]
 pub struct Tile {
     possible_states: BTreeSet<TileState>,
     // can be calculated from possible_states, but we can spare some memory for better performance
@@ -48,7 +46,7 @@ impl Tile {
     }
 }
 
-impl TileInterface<TileState, Location2D> for Tile {
+impl TileInterface<TileState> for Tile {
     fn possible_states(&self) -> impl Iterator<Item = TileState> {
         self.possible_states.iter().cloned()
     }

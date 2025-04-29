@@ -15,7 +15,7 @@ impl<
     TState: Hash + Eq + Copy,
     TPosition: Copy,
     TDirection: Direction<N>,
-    T: TileInterface<TState, TPosition>,
+    T: TileInterface<TState>,
     TGrid: WaveFunctionCollapse<N, TState, TPosition, TDirection, T>,
 > Backtracker<N, TState, TPosition, TDirection, T, TGrid> for BacktrackerByReset
 {

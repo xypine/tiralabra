@@ -13,7 +13,7 @@ use crate::{
     tile::{Tile, TileState, interface::TileInterface},
     utils::{
         entropy::EntropyHeapEntry,
-        space::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
+        space::s2d::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
     wave_function_collapse::{interface::WaveFunctionCollapse, propagate_from_tile},
 };
@@ -38,6 +38,7 @@ pub struct DynamicSizeGrid2D {
     /// Keeps history of tile modifications for backtracking
     pub update_log: Vec<(Location2D, Tile)>,
     /// Dictates random events
+    #[tsify(type = "any")]
     rng: ChaCha8Rng,
 }
 
@@ -46,7 +47,7 @@ impl DynamicSizeGrid2D {
     fn update_tile(&mut self, location: Location2D, state: Tile) -> Option<()> {
         let current_state = self.get_tile(location)?;
 
-        if state == current_state {
+        if state == *current_state {
             // no update needed
             return Some(());
         }
@@ -177,7 +178,16 @@ impl DynamicSizeGrid2D {
 }
 
 // See `GridInterface` for further documentation
-impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeGrid2D {
+impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
+    for DynamicSizeGrid2D
+{
+    fn get_dimensions(&self) -> Location2D {
+        Location2D {
+            x: self.width,
+            y: self.height,
+        }
+    }
+
     fn reset(&mut self) {
         *self = Self::new(
             self.width,
@@ -196,12 +206,15 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         map
     }
 
-    fn get_tile(&self, location: Location2D) -> Option<Tile> {
+    fn get_tile(&self, location: Location2D) -> Option<&Tile> {
         let index = self.location_to_index(location);
-        self.tiles.get(index).cloned()
+        self.tiles.get(index)
     }
 
-    fn get_neighbours(&self, location: Location2D) -> [(Direction2D, Option<Location2D>); 4] {
+    fn get_neighbours(
+        &self,
+        location: Location2D,
+    ) -> [(Direction2D, Option<Location2D>); NEIGHBOUR_COUNT_2D] {
         // index is 0..4
         std::array::from_fn(|index| {
             let direction = Direction2D::try_from(index).unwrap();
@@ -219,7 +232,10 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         })
     }
 
-    fn get_neighbour_tiles(&self, location: Location2D) -> [(Direction2D, Option<Tile>); 4] {
+    fn get_neighbour_tiles(
+        &self,
+        location: Location2D,
+    ) -> [(Direction2D, Option<&Tile>); NEIGHBOUR_COUNT_2D] {
         let locations = self.get_neighbours(location);
         std::array::from_fn(|index| {
             let (direction, neighbour_location) = locations[index];
@@ -257,14 +273,14 @@ impl GridInterface<4, TileState, Location2D, Direction2D, Tile> for DynamicSizeG
         f: F,
     ) -> Option<R> {
         // give the caller mutable access to a copied version of the tile
-        let mut mutable_copy = self.get_tile(location)?;
+        let mut mutable_copy = self.get_tile(location)?.clone();
         let result = f(&mut mutable_copy, &mut self.rng);
         // update the actual tile, updating the entropy heap if needed
         self.update_tile(location, mutable_copy)?;
         Some(result)
     }
 
-    fn get_rules(&self) -> &RuleSet<4, Direction2D> {
+    fn get_rules(&self) -> &RuleSet<NEIGHBOUR_COUNT_2D, Direction2D> {
         &self.rules
     }
 }

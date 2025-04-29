@@ -4,7 +4,7 @@ use aaltofunktionromautus::{
     rules::RuleSet2D,
     tile_extraction::{
         TileExtractor,
-        overlapping::{OverlappingBitmapExtractor, OverlappingBitmapExtractorOptions},
+        overlapping_bitmap::{OverlappingBitmapExtractor, OverlappingBitmapExtractorOptions},
     },
 };
 
@@ -42,4 +42,21 @@ pub fn main() {
 
     let rules: RuleSet2D =
         serde_json::from_str(fs::read_to_string("./rules.json").unwrap().as_str()).unwrap();
+
+    let rules2: RuleSet2D = serde_json::from_str(include_str!("../rules.json")).unwrap();
+
+    // let source = "Let's go fishing tomorrow, I know a good spot the rascals haven't found yet. At least I hope so...".to_owned();
+    //
+    // let options = OverlappingTextExtractorOptions { n: 3 };
+    //
+    // let extractor = OverlappingTextExtractor::new(source, options);
+    //
+    // let ruleset = extractor.get_rules();
+    // println!(
+    //     "possible tokens: {}",
+    //     extractor.get_rules().possible.iter().count()
+    // );
+    //
+    // let json = serde_json::to_string(extractor.get_rules()).expect("serializing ruleset to json");
+    // fs::write("rules_txt.json", json).expect("writing rules_txt.json");
 }

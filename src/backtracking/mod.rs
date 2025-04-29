@@ -13,7 +13,7 @@ pub trait Backtracker<
     TState: Hash + Eq + Copy,
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
-    T: TileInterface<TState, TPosition>,
+    T: TileInterface<TState>,
     TGrid: WaveFunctionCollapse<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, T>,
 >
 {

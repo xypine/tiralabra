@@ -7,6 +7,7 @@ use rand_chacha::ChaCha8Rng;
 use crate::{rules::RuleSet, tile::interface::TileInterface, utils::space::Direction};
 
 pub mod constant_2d;
+pub mod dynamic_1d;
 pub mod dynamic_2d;
 
 #[cfg(test)]
@@ -18,9 +19,10 @@ pub trait GridInterface<
     TState: Hash + Eq + Copy,
     TPosition,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
-    T: TileInterface<TState, TPosition>,
+    T: TileInterface<TState>,
 >: Sized
 {
+    fn get_dimensions(&self) -> TPosition;
     /// should reset all tile states
     fn reset(&mut self);
 
@@ -28,7 +30,7 @@ pub trait GridInterface<
     fn image(&self) -> HashMap<TPosition, T>;
 
     /// Returns a the requested tile if `location` falls inside the bounds of the grid
-    fn get_tile(&self, location: TPosition) -> Option<T>;
+    fn get_tile(&self, location: TPosition) -> Option<&T>;
 
     /// Returns an array of locations neighbouring the tile, each can be None if it falls outside
     /// the grid
@@ -42,7 +44,7 @@ pub trait GridInterface<
     fn get_neighbour_tiles(
         &self,
         location: TPosition,
-    ) -> [(TDirection, Option<T>); NEIGHBOURS_PER_TILE];
+    ) -> [(TDirection, Option<&T>); NEIGHBOURS_PER_TILE];
 
     /// Returns the position of the tile in the grid with the lowest "Entropy"
     fn get_lowest_entropy_position(&mut self) -> Option<TPosition>;

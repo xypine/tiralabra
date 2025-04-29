@@ -13,7 +13,8 @@ const worker_id = Math.floor(Math.random() * 1000);
 console.log(`Worker ${worker_id} loaded`);
 
 export type State = {
-  tiles: Tile[];
+  // tiles: Tile[];
+  rendered: string;
   history_len: number;
   history_position?: number;
   seed: number;
@@ -22,6 +23,7 @@ export type State = {
 export const INBUILT_RULE_SETS = [
   "terrain",
   "flowers_singlepixel",
+  "flowers",
   "terrain_simple",
   "checkers",
   "stripes",
@@ -53,7 +55,7 @@ export type WorkerRequest = BaseSettings &
         type: "collapse";
         x: number;
         y: number;
-        state?: number;
+        state?: bigint;
       }
     | {
         type: "rule_check";
@@ -99,8 +101,11 @@ function getRules(ruleset: InbuiltRuleSet) {
     case "stripes":
       rules = Rules.stripes();
       break;
-    default:
-      throw new Error("Unknown ruleset: '" + ruleset + "'");
+    case "flowers":
+      rules = Rules.flowers();
+      break;
+    // default:
+    //   throw new Error("Unknown ruleset: '" + ruleset + "'");
   }
   return rules;
 }
@@ -126,11 +131,16 @@ async function reset(
     dimensions.width,
     dimensions.height,
   );
-  persistent_state = { grid, tileset, seed };
+  persistent_state = { grid, tileset, seed, history_cache: new Map() };
   return persistent_state;
 }
 
-type PersistentState = { grid: Grid; tileset: TileVisual[]; seed: number };
+type PersistentState = {
+  grid: Grid;
+  tileset: TileVisual[];
+  seed: number;
+  history_cache: Map<number, State>;
+};
 type PersistentStateUpdate = PersistentState & { was_reset?: boolean };
 let persistent_state: PersistentState | undefined = undefined;
 async function usePersistentState(basics: BaseSettings) {
@@ -152,22 +162,25 @@ async function usePersistentState(basics: BaseSettings) {
 function state(s: PersistentState, t?: number): State {
   const dimensions = s.grid.get_dimensions();
   const history_len = s.grid.get_history_len();
-  let tiles;
-  if (t !== undefined) {
-    tiles = s.grid.dump_at_time(t);
-  } else {
-    tiles = s.grid.dump();
-  }
+  // let tiles;
+  // if (t !== undefined) {
+  //   let existing = s.history_cache.get(t);
+  //   tiles = s.grid.dump_at_time(t);
+  // } else {
+  //   tiles = s.grid.dump();
+  // }
+  let rendered = s.grid.render(500, 500);
   return {
     ...dimensions,
-    tiles,
+    // tiles,
+    rendered,
     history_len,
-    history_position: t === undefined ? undefined : t,
+    history_position: t,
     seed: s.seed,
   };
 }
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  console.log("Worker got message", e.data);
+  // console.log("Worker got message", e.data);
 
   // wait until wasm has been loaded
   if (!initPromise) {
@@ -283,7 +296,7 @@ async function collapse(data: WorkerRequest, s: PersistentStateUpdate) {
   s.grid.collapse(
     data.x,
     data.y,
-    data.state !== undefined ? BigInt(data.state) : undefined,
+    data.state !== undefined ? data.state : undefined,
   );
   const resp: WorkerResponse = {
     type: "state_update",
