@@ -8,6 +8,6 @@ pkg/
 
 mutants.out.old/
 mutants.out/
-rules.json
+#rules.json
 tarpaulin-report.html
 tiles.txt
