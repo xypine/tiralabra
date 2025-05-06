@@ -47,9 +47,12 @@ impl Tile {
 }
 
 impl TileInterface<TileState> for Tile {
+    #[inline]
     fn possible_states(&self) -> impl Iterator<Item = TileState> {
         self.possible_states.iter().cloned()
     }
+
+    #[inline]
     fn possible_states_ref<'a>(&'a self) -> impl Iterator<Item = &'a TileState>
     where
         TileState: 'a,
@@ -57,15 +60,18 @@ impl TileInterface<TileState> for Tile {
         self.possible_states.iter()
     }
 
+    #[inline]
     fn has_collapsed(&self) -> bool {
         self.collapsed
     }
 
+    #[inline]
     fn set_possible_states<I: IntoIterator<Item = TileState>>(&mut self, states: I) {
         self.possible_states = BTreeSet::from_iter(states);
         self.invalidate_cache();
     }
 
+    #[inline]
     fn collapse<R: Rng>(
         &mut self,
         value: TileCollapseInstruction<TileState, R>,
@@ -79,7 +85,7 @@ impl TileInterface<TileState> for Tile {
                     .collect();
                 let dist = WeightedIndex::new(w).unwrap();
                 let chosen_index = dist.sample(rng);
-                self.possible_states().skip(chosen_index).next()?
+                self.possible_states().nth(chosen_index)?
             }
         };
 

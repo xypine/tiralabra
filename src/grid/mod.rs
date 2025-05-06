@@ -4,7 +4,11 @@ use std::{collections::HashMap, hash::Hash};
 
 use rand_chacha::ChaCha8Rng;
 
-use crate::{rules::RuleSet, tile::interface::TileInterface, utils::space::Direction};
+use crate::{
+    rules::RuleSet,
+    tile::interface::TileInterface,
+    utils::space::{Direction, Location},
+};
 
 pub mod constant_2d;
 pub mod dynamic_1d;
@@ -17,12 +21,13 @@ pub mod tests;
 pub trait GridInterface<
     const NEIGHBOURS_PER_TILE: usize,
     TState: Hash + Eq + Copy,
-    TPosition,
+    TPosition: Location,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
     T: TileInterface<TState>,
 >: Sized
 {
     fn get_dimensions(&self) -> TPosition;
+
     /// should reset all tile states
     fn reset(&mut self);
 

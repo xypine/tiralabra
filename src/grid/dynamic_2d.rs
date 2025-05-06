@@ -189,12 +189,14 @@ impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
     }
 
     fn reset(&mut self) {
+        let update_log = self.update_log.clone();
         *self = Self::new(
             self.width,
             self.height,
             self.rules.clone(),
             self.rng.random(),
-        )
+        );
+        self.update_log = update_log;
     }
 
     fn image(&self) -> std::collections::HashMap<Location2D, Tile> {

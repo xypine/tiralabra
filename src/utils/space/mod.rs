@@ -1,5 +1,6 @@
 //! Dimension-agnostic interfaces for space-related utils
 
+use std::fmt::Debug;
 use std::hash::Hash;
 
 pub mod s1d;
@@ -7,7 +8,10 @@ pub mod s2d;
 pub mod s3d;
 
 /// Dimension-agnostic Location
-pub trait Location<const DIMENSIONS: usize> {}
+pub trait Location: Debug + Hash + Eq + Copy {
+    /// returns the distance from zero
+    fn length(&self) -> usize;
+}
 
 /// Dimension-agnostic direction that can be mirrored
 ///

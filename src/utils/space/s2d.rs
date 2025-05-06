@@ -37,7 +37,11 @@ impl Location2D {
     }
 }
 
-impl Location<AXIS_2D> for Location2D {}
+impl Location for Location2D {
+    fn length(&self) -> usize {
+        self.x * self.y
+    }
+}
 
 impl TryFrom<Location2D> for Delta2D {
     type Error = TryFromIntError;

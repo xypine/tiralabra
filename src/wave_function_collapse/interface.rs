@@ -7,8 +7,10 @@ use std::{collections::VecDeque, hash::Hash};
 use serde::Serialize;
 
 use crate::{
-    backtracking::Backtracker, grid::GridInterface, tile::interface::TileInterface,
-    utils::space::Direction,
+    backtracking::Backtracker,
+    grid::GridInterface,
+    tile::interface::TileInterface,
+    utils::space::{Direction, Location},
 };
 
 /// Used when the algorithm has to return early for some reason
@@ -37,7 +39,7 @@ pub type TickResult<TPosition> = Result<(), WaveFunctionCollapseInterruption<TPo
 pub trait WaveFunctionCollapse<
     const NEIGHBOURS_PER_TILE: usize,
     TState: Hash + Eq + Copy,
-    TPosition,
+    TPosition: Location,
     TDirection: Direction<{ NEIGHBOURS_PER_TILE }>,
     T: TileInterface<TState>,
 >: GridInterface<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, T>
@@ -75,7 +77,7 @@ pub trait WaveFunctionCollapse<
                 Ok(()) => continue,
                 Err(WaveFunctionCollapseInterruption::Contradiction(e)) => {
                     if let Some(handler) = backtracker.as_mut() {
-                        handler.contradiction_handler(self, e)?;
+                        handler.contradiction_handler_recursive(self, e, 300)?;
                     } else {
                         return Err(WaveFunctionCollapseInterruption::Contradiction(e));
                     }

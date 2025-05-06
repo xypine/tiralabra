@@ -20,7 +20,7 @@ use crate::{
         interface::{TileCollapseInstruction, TileInterface},
     },
     utils::space::{
-        Direction,
+        Direction, Location,
         s2d::{Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
 };
@@ -113,17 +113,16 @@ impl<T: GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Ti
 pub fn propagate_from_tile<
     const NEIGHBOURS_PER_TILE: usize,
     TState: Hash + Eq + Copy,
-    TPosition: Copy,
-    TDirection,
-    TTile,
+    TPosition,
+    TDirection: Direction<NEIGHBOURS_PER_TILE>,
+    TTile: TileInterface<TState>,
     T,
 >(
     grid: &T,
     position: TPosition,
 ) -> VecDeque<PropagateQueueEntry<TPosition>>
 where
-    TDirection: Direction<NEIGHBOURS_PER_TILE>,
-    TTile: TileInterface<TState>,
+    TPosition: Location,
     T: WaveFunctionCollapse<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, TTile>,
 {
     let mut queue = VecDeque::new();

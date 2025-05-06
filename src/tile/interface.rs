@@ -7,6 +7,7 @@ use crate::utils::entropy::Entropy;
 
 pub enum TileCollapseInstruction<'a, State, R: Rng> {
     Predetermined(State),
+    /// rng, weights
     Random(&'a mut R, &'a HashMap<State, usize>),
 }
 

@@ -8,7 +8,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    backtracking::reset::BacktrackerByReset,
+    backtracking::{gradual_reset::BacktrackerByGradualReset, reset::BacktrackerByReset},
     grid::dynamic_2d::DynamicSizeGrid2D,
     rules::RuleSet2D,
     tile::{Tile, TileState, interface::TileInterface},
@@ -207,7 +207,8 @@ impl Grid {
     }
 
     pub fn run(&mut self, max_iter: usize) -> Option<bool> {
-        let result = self.0.run(max_iter, Some(BacktrackerByReset {}));
+        let b = BacktrackerByGradualReset::new();
+        let result = self.0.run(max_iter, Some(b));
         let done = match result {
             Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,

@@ -36,7 +36,11 @@ impl Location1D {
     }
 }
 
-impl Location<AXIS_1D> for Location1D {}
+impl Location for Location1D {
+    fn length(&self) -> usize {
+        self.x
+    }
+}
 
 impl TryFrom<Location1D> for Delta1D {
     type Error = TryFromIntError;

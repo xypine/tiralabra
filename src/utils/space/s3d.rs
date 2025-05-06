@@ -38,7 +38,11 @@ impl Location3D {
     }
 }
 
-impl Location<AXIS_3D> for Location3D {}
+impl Location for Location3D {
+    fn length(&self) -> usize {
+        self.x * self.y * self.z
+    }
+}
 
 impl TryFrom<Location3D> for Delta3D {
     type Error = TryFromIntError;
