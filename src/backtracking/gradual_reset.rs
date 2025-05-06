@@ -3,6 +3,8 @@ use std::{
     num::NonZeroUsize,
 };
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     tile::{TileState, interface::TileInterface},
     utils::space::{Direction, Location},
@@ -11,15 +13,23 @@ use crate::{
 
 use super::Backtracker;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct BacktrackerByGradualReset<TPosition: Location> {
+    base_radius: usize,
     reset_count: HashMap<TPosition, NonZeroUsize>,
 }
 
+impl<TPosition: Location> Default for BacktrackerByGradualReset<TPosition> {
+    fn default() -> Self {
+        Self::new(1)
+    }
+}
+
 impl<TPosition: Location> BacktrackerByGradualReset<TPosition> {
-    pub fn new() -> Self {
+    pub fn new(starting_radius: usize) -> Self {
         Self {
             reset_count: HashMap::new(),
+            base_radius: starting_radius,
         }
     }
 }
@@ -33,10 +43,6 @@ impl<
 > Backtracker<N, TileState, TPosition, TDirection, T, TGrid>
     for BacktrackerByGradualReset<TPosition>
 {
-    fn change_listener(&mut self, _change_location: TPosition, _new_states: T) {
-        // no-op, we don't need this information
-    }
-
     fn contradiction_handler(
         &mut self,
         grid: &mut TGrid,
@@ -49,7 +55,7 @@ impl<
             .unwrap_or(NonZeroUsize::new(1).unwrap());
         self.reset_count.insert(contradiction_location, resets);
 
-        let max_radius = usize::from(resets).pow(2);
+        let max_radius = (usize::from(resets) + self.base_radius).pow(2);
 
         // gather an area of tiles around the contradiction to reset
         // we increase the area the more contradictions there have been at this location
@@ -77,9 +83,6 @@ impl<
                 }
             }
         }
-        println!("max {resets} -> {}", max_radius);
-        println!("lir {:?}", locations_in_radius);
-        println!("lir {:?}", locations_neighboring_radius);
 
         // small optimization: if we're about to reset all tiles, let's just reset the entire grid
         let tiles_in_grid = grid.get_dimensions().length();
@@ -95,6 +98,13 @@ impl<
             grid.with_tile(*location, |t, _| {
                 t.set_possible_states(rules_possible.clone());
             });
+            // update the reset counter
+            let resets = self
+                .reset_count
+                .get(location)
+                .map(|&u| u.checked_add(1).unwrap())
+                .unwrap_or(NonZeroUsize::new(1).unwrap());
+            self.reset_count.insert(contradiction_location, resets);
         }
 
         let mut propagation_queue = VecDeque::new();
@@ -103,20 +113,21 @@ impl<
             grid.with_tile(border_location, |t, _| {
                 t.set_possible_states(rules_possible.clone());
             });
-            let neighbours = grid.get_neighbours(border_location);
+        }
+
+        // revalidate all tiles
+        for position in grid.positions() {
+            let neighbours = grid.get_neighbours(position);
             for (_direction, npos) in neighbours {
                 if let Some(neighbour_position) = npos {
-                    // we propagate changes into the reset area
-                    if locations_in_radius.contains(&neighbour_position) {
-                        propagation_queue.push_back(PropagateQueueEntry {
-                            source: border_location,
-                            target: neighbour_position,
-                        });
-                    }
                     // we recalculate the possible states of the bordering tile
                     propagation_queue.push_back(PropagateQueueEntry {
+                        source: position,
+                        target: neighbour_position,
+                    });
+                    propagation_queue.push_back(PropagateQueueEntry {
                         source: neighbour_position,
-                        target: border_location,
+                        target: position,
                     });
                 }
             }
@@ -180,7 +191,7 @@ mod tests {
     #[test]
     fn gradual_reset() {
         let target = Location2D { x: 0, y: 0 };
-        let mut b = BacktrackerByGradualReset::new();
+        let mut b = BacktrackerByGradualReset::new(0);
 
         // once, only the contradicting tile and it's neighbours should be reset
         let mut grid = gen_grid(target);

@@ -210,6 +210,10 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
         &self.rules
     }
 
+    fn positions(&self) -> impl Iterator<Item = Location2D> {
+        (0..W).flat_map(|x| (0..H).map(move |y| Location2D { x, y }))
+    }
+
     fn get_tiles_at_time(&self, _time_index: usize) -> HashMap<Location2D, Tile> {
         unimplemented!()
     }

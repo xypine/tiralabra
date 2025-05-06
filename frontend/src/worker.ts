@@ -5,6 +5,9 @@ import initSync, {
   TileState,
   Direction2D,
   TileVisual,
+  Backtracker2D,
+  BacktrackerVariant,
+  new_backtracker,
 } from "aaltofunktionromautus";
 import { pickRandomSeed, Seed } from "./utils";
 
@@ -34,6 +37,7 @@ export type BaseSettings = {
   dimensions: Dimensions;
   rules: InbuiltRuleSet;
   seed: Seed;
+  backtracker: BacktrackerVariant | null;
 };
 
 export type WorkerRequest = BaseSettings &
@@ -110,6 +114,14 @@ function getRules(ruleset: InbuiltRuleSet) {
   return rules;
 }
 
+function getBacktracker(variant: BacktrackerVariant | null) {
+  let backtracker = null;
+  if (variant !== null) {
+    backtracker = new_backtracker(variant);
+  }
+  return backtracker;
+}
+
 let initPromise: Promise<void>;
 async function initWasm() {
   await initSync();
@@ -120,24 +132,37 @@ async function reset(
   seed: number,
   dimensions: Dimensions,
   ruleset: InbuiltRuleSet,
+  backtrackerVariant: BacktrackerVariant | null,
   cause: string,
 ) {
-  console.info("reset", { dimensions, ruleset, cause });
+  console.info("reset", { dimensions, ruleset, backtrackerVariant, cause });
+  console.time("getRules");
   const rules = getRules(ruleset);
-  const tileset = rules.get_visual_tileset();
+  console.timeEnd("getRules");
+  // const tileset = rules.get_visual_tileset();
+  console.time("reset");
   const grid = new Grid(
     BigInt(seed),
     rules,
     dimensions.width,
     dimensions.height,
   );
-  persistent_state = { grid, tileset, seed, history_cache: new Map() };
+  console.timeEnd("reset");
+  const backtracker = getBacktracker(backtrackerVariant);
+  persistent_state = {
+    grid,
+    seed,
+    history_cache: new Map(),
+    tickBacktracker: backtracker,
+  };
+  console.info({ persistent_state });
   return persistent_state;
 }
 
 type PersistentState = {
   grid: Grid;
-  tileset: TileVisual[];
+  // tileset: TileVisual[];
+  tickBacktracker: Backtracker2D | null;
   seed: number;
   history_cache: Map<number, State>;
 };
@@ -151,6 +176,7 @@ async function usePersistentState(basics: BaseSettings) {
       basics.seed.value,
       basics.dimensions,
       basics.rules,
+      basics.backtracker,
       "init",
     );
     persistent_state = state;
@@ -209,6 +235,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       seedForReset,
       e.data.dimensions,
       e.data.rules,
+      e.data.backtracker,
       "grid was finished",
     );
   }
@@ -219,13 +246,14 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         seedForReset,
         e.data.dimensions,
         e.data.rules,
+        e.data.backtracker,
         "requested",
       );
     }
     const resp: WorkerResponse = {
       type: "state_update",
       state: state(s, e.data.outputSize),
-      tileset: s.tileset,
+      // tileset: s.tileset,
     };
     self.postMessage(resp);
   } else if (e.data.type === "tick") {
@@ -265,11 +293,13 @@ async function tick(data: WorkerRequest, s: PersistentStateUpdate) {
   if (data.type !== "tick") {
     throw new Error("Unexpected message type");
   }
-  s.grid.tick();
+  console.time("tick");
+  s.grid.tick(s.tickBacktracker);
+  console.timeEnd("tick");
   const resp: WorkerResponse = {
     type: "state_update",
     state: state(s, data.outputSize),
-    tileset: s.was_reset ? s.tileset : undefined,
+    // tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
 }
@@ -279,11 +309,13 @@ async function run(data: WorkerRequest, s: PersistentStateUpdate) {
     throw new Error("Unexpected message type");
   }
   const dimensions = s.grid.get_dimensions();
-  s.grid.run(dimensions.width * dimensions.height * 100);
+  console.time("run");
+  s.grid.run(dimensions.width * dimensions.height * 100, data.backtracker);
+  console.timeEnd("run");
   const resp: WorkerResponse = {
     type: "state_update",
     state: state(s, data.outputSize),
-    tileset: s.was_reset ? s.tileset : undefined,
+    // tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
 }
@@ -301,7 +333,7 @@ async function collapse(data: WorkerRequest, s: PersistentStateUpdate) {
   const resp: WorkerResponse = {
     type: "state_update",
     state: state(s, data.outputSize),
-    tileset: s.was_reset ? s.tileset : undefined,
+    // tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
 }

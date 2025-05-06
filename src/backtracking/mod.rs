@@ -3,9 +3,14 @@ pub mod reset;
 
 use std::hash::Hash;
 
+use gradual_reset::BacktrackerByGradualReset;
+use reset::BacktrackerByReset;
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
+
 use crate::{
-    tile::interface::TileInterface,
-    utils::space::{Direction, Location},
+    tile::{TileState, interface::TileInterface},
+    utils::space::{Direction, Location, s2d::Location2D},
     wave_function_collapse::interface::{
         TickResult, WaveFunctionCollapse, WaveFunctionCollapseInterruption,
     },
@@ -20,9 +25,6 @@ pub trait Backtracker<
     TGrid: WaveFunctionCollapse<NEIGHBOURS_PER_TILE, TState, TPosition, TDirection, T>,
 >
 {
-    /// Returns a closure that can be called on tile change.
-    fn change_listener(&mut self, change_location: TPosition, new_states: T);
-
     /// Returns a closure that handles contradictions.
     fn contradiction_handler(
         &mut self,
@@ -53,6 +55,36 @@ pub trait Backtracker<
                 }
             }
             tries += 1;
+        }
+    }
+}
+
+#[derive(Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum Backtracker2D {
+    Reset(BacktrackerByReset),
+    GradualReset(BacktrackerByGradualReset<Location2D>),
+}
+
+impl<
+    const N: usize,
+    TDirection: Direction<N>,
+    T: TileInterface<TileState>,
+    TGrid: WaveFunctionCollapse<N, TileState, Location2D, TDirection, T>,
+> Backtracker<N, TileState, Location2D, TDirection, T, TGrid> for Backtracker2D
+{
+    fn contradiction_handler(
+        &mut self,
+        grid: &mut TGrid,
+        contradiction_location: Location2D,
+    ) -> TickResult<Location2D> {
+        match self {
+            Backtracker2D::Reset(backtracker_by_reset) => {
+                backtracker_by_reset.contradiction_handler(grid, contradiction_location)
+            }
+            Backtracker2D::GradualReset(backtracker_by_gradual_reset) => {
+                backtracker_by_gradual_reset.contradiction_handler(grid, contradiction_location)
+            }
         }
     }
 }

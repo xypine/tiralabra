@@ -1,5 +1,7 @@
 use std::hash::Hash;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     tile::interface::TileInterface,
     utils::space::{Direction, Location},
@@ -8,6 +10,7 @@ use crate::{
 
 use super::Backtracker;
 
+#[derive(Serialize, Deserialize)]
 pub struct BacktrackerByReset {}
 
 impl<
@@ -19,10 +22,6 @@ impl<
     TGrid: WaveFunctionCollapse<N, TState, TPosition, TDirection, T>,
 > Backtracker<N, TState, TPosition, TDirection, T, TGrid> for BacktrackerByReset
 {
-    fn change_listener(&mut self, _change_location: TPosition, _new_states: T) {
-        // no-op, we don't need this information
-    }
-
     fn contradiction_handler(
         &mut self,
         grid: &mut TGrid,

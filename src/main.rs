@@ -10,7 +10,7 @@ use aaltofunktionromautus::{
 
 #[cfg(not(tarpaulin_include))] // the utility binary doesn't need to be unit tested
 pub fn main() {
-    let img = image::open("./samples/Flowers.png").expect("failed to open sample image");
+    let img = image::open("./samples/Link.png").expect("failed to open sample image");
     let extractor = OverlappingBitmapExtractor::new(
         img,
         OverlappingBitmapExtractorOptions {

@@ -180,11 +180,6 @@ impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
         map
     }
 
-    fn get_tile(&self, location: Location2D) -> Option<&Tile> {
-        let index = self.location_to_index(location);
-        self.tiles.get(index)
-    }
-
     fn get_tiles_at_time(&self, time_index: usize) -> HashMap<Location2D, Tile> {
         let mut tiles = HashMap::new();
         let mut i = 0;
@@ -196,6 +191,11 @@ impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
             }
         }
         tiles
+    }
+
+    fn get_tile(&self, location: Location2D) -> Option<&Tile> {
+        let index = self.location_to_index(location);
+        self.tiles.get(index)
     }
 
     fn get_neighbours(
@@ -256,6 +256,10 @@ impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
 
     fn get_rules(&self) -> &RuleSet<NEIGHBOUR_COUNT_2D, Direction2D> {
         &self.rules
+    }
+
+    fn positions(&self) -> impl Iterator<Item = Location2D> {
+        (0..(self.width * self.height)).map(|i| self.index_to_location(i))
     }
 }
 

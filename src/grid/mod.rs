@@ -26,6 +26,7 @@ pub trait GridInterface<
     T: TileInterface<TState>,
 >: Sized
 {
+    /// returns the size of the grid: for example width (x) and height (y) in 2D
     fn get_dimensions(&self) -> TPosition;
 
     /// should reset all tile states
@@ -66,4 +67,7 @@ pub trait GridInterface<
     /// Returns the rules associated with the grid. A grid must know the rules to initialize tiles
     /// correctly.
     fn get_rules(&self) -> &RuleSet<NEIGHBOURS_PER_TILE, TDirection>;
+
+    /// Returns an iterator over all valid tile positions in the grid
+    fn positions(&self) -> impl Iterator<Item = TPosition>;
 }

@@ -8,7 +8,9 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    backtracking::{gradual_reset::BacktrackerByGradualReset, reset::BacktrackerByReset},
+    backtracking::{
+        Backtracker2D, gradual_reset::BacktrackerByGradualReset, reset::BacktrackerByReset,
+    },
     grid::dynamic_2d::DynamicSizeGrid2D,
     rules::RuleSet2D,
     tile::{Tile, TileState, interface::TileInterface},
@@ -187,8 +189,8 @@ impl Grid {
         Some(done)
     }
 
-    pub fn tick(&mut self) -> Option<bool> {
-        let result = self.0.run(1, Some(BacktrackerByReset {}));
+    pub fn tick(&mut self, backtracker: Option<Backtracker2D>) -> Option<bool> {
+        let result = self.0.run(1, backtracker);
         let done = match result {
             Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(WaveFunctionCollapseInterruption::MaxIterationsReached) => false,
@@ -198,14 +200,34 @@ impl Grid {
         Some(done)
     }
 
-    pub fn run(&mut self, max_iter: usize) -> Option<bool> {
-        let b = BacktrackerByGradualReset::new();
-        let result = self.0.run(max_iter, Some(b));
+    pub fn run(
+        &mut self,
+        max_iter: usize,
+        backtracker_variant: Option<BacktrackerVariant>,
+    ) -> Option<bool> {
+        let b = backtracker_variant.map(new_backtracker);
+        let result = self.0.run(max_iter, b);
         let done = match result {
             Err(WaveFunctionCollapseInterruption::Finished) => true,
             Err(_) => return None,
             Ok(_) => false,
         };
         Some(done)
+    }
+}
+
+#[wasm_bindgen]
+pub enum BacktrackerVariant {
+    Reset,
+    GradualReset,
+}
+
+#[wasm_bindgen]
+pub fn new_backtracker(variant: BacktrackerVariant) -> Backtracker2D {
+    match variant {
+        BacktrackerVariant::Reset => Backtracker2D::Reset(BacktrackerByReset {}),
+        BacktrackerVariant::GradualReset => {
+            Backtracker2D::GradualReset(BacktrackerByGradualReset::default())
+        }
     }
 }

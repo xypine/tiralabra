@@ -13,7 +13,10 @@ use crate::{
     tile::{Tile, TileState, interface::TileInterface},
     utils::{
         entropy::EntropyHeapEntry1D,
-        space::s1d::{Delta1D, Direction1D, Location1D, NEIGHBOUR_COUNT_1D},
+        space::{
+            Location,
+            s1d::{Delta1D, Direction1D, Location1D, NEIGHBOUR_COUNT_1D},
+        },
     },
 };
 
@@ -237,5 +240,9 @@ impl GridInterface<NEIGHBOUR_COUNT_1D, TileState, Location1D, Direction1D, Tile>
 
     fn get_rules(&self) -> &RuleSet<NEIGHBOUR_COUNT_1D, Direction1D> {
         &self.rules
+    }
+
+    fn positions(&self) -> impl Iterator<Item = Location1D> {
+        (0..self.width).map(|x| Location1D { x })
     }
 }

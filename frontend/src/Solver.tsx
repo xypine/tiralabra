@@ -26,6 +26,7 @@ import Worker from "./worker?worker";
 import RulesetDebug from "./RulesetDebug";
 import { pickRandomSeed } from "./utils";
 import { untrack } from "solid-js/web";
+import { BacktrackerVariant } from "../pkg/aaltofunktionromautus";
 
 export type VisualGrid = Map<Location2D, Tile>;
 
@@ -34,7 +35,8 @@ const SOLVE_DELAY = 0 as const;
 const Solver: Component<{
   dimensions: Accessor<Dimensions>;
   rules: Accessor<InbuiltRuleSet>;
-}> = ({ dimensions, rules }) => {
+  backtracker: Accessor<BacktrackerVariant | null>;
+}> = ({ dimensions, rules, backtracker }) => {
   const [size, setSize] = createSignal(500);
   const calculateMinViewportSize = () => {
     const vw = window.innerWidth * 0.75;
@@ -51,7 +53,7 @@ const Solver: Component<{
   const [randomSeed, setRandomSeed] = createSignal<boolean>(true);
   const [seed, setSeed] = createSignal<number>(pickRandomSeed());
   const [state, setState] = createSignal<State | null>(null);
-  const [tileSet, setTileSet] = createSignal<TileVisual[]>([]);
+  // const [tileSet, setTileSet] = createSignal<TileVisual[]>([]);
   const [tickActive, setTickActive] = createSignal(false);
   const [timeTravelIndex, setTimeTravelIndex] = createSignal<
     number | undefined
@@ -59,7 +61,7 @@ const Solver: Component<{
 
   const tooLargeForTick = createMemo(() => {
     const dim = dimensions();
-    return dim.width > 40 || dim.height > 40;
+    return dim.width > 55 || dim.height > 55;
   });
 
   createEffect(() => {
@@ -78,6 +80,7 @@ const Solver: Component<{
           allowRandomization: randomSeed(),
           value: seed(),
         },
+        backtracker: backtracker(),
       });
     } else if (
       tti === undefined &&
@@ -95,6 +98,7 @@ const Solver: Component<{
           allowRandomization: randomSeed(),
           value: seed(),
         },
+        backtracker: backtracker(),
       });
     }
   });
@@ -114,7 +118,7 @@ const Solver: Component<{
       if (newState.seed !== seed()) {
         setSeed(newState.seed);
       }
-      let newTileSet = data.tileset;
+      // let newTileSet = data.tileset;
       if (data.type === "tick_update") {
         const res = data.result;
         if (res === undefined) {
@@ -126,9 +130,9 @@ const Solver: Component<{
       }
 
       requestAnimationFrame(() => {
-        if (newTileSet) {
-          setTileSet(newTileSet);
-        }
+        // if (newTileSet) {
+        //   setTileSet(newTileSet);
+        // }
         setState(newState);
       });
       setWaitingForWorker(false);
@@ -153,9 +157,10 @@ const Solver: Component<{
     console.debug("reset (dimensions / rules changed)");
     const d = dimensions();
     const r = rules();
+    const b = backtracker();
     untrack(() => {
       calculateMinViewportSize();
-      reset(d, r, seed(), randomSeed());
+      reset(d, r, seed(), randomSeed(), b);
     });
   });
 
@@ -181,6 +186,7 @@ const Solver: Component<{
     r: InbuiltRuleSet,
     seed: number,
     allowRandomization: boolean,
+    backtracker: BacktrackerVariant,
     activate = false,
   ) {
     postMessage({
@@ -192,6 +198,7 @@ const Solver: Component<{
         allowRandomization,
         value: seed,
       },
+      backtracker,
     });
     setTickActive(activate);
   }
@@ -205,6 +212,7 @@ const Solver: Component<{
         allowRandomization: randomSeed(),
         value: seed(),
       },
+      backtracker: backtracker(),
     });
   }
   function collapse(x: number, y: number, state?: bigint) {
@@ -220,6 +228,7 @@ const Solver: Component<{
         allowRandomization: randomSeed(),
         value: seed(),
       },
+      backtracker: backtracker(),
     });
   }
   function run() {
@@ -233,6 +242,7 @@ const Solver: Component<{
         allowRandomization: randomSeed(),
         value: seed(),
       },
+      backtracker: backtracker(),
     });
   }
 
@@ -394,29 +404,29 @@ const Solver: Component<{
               let valn = val ? +val : undefined;
               if (valn) {
                 setSeed(valn);
-                reset(dimensions(), rules(), valn, false);
+                reset(dimensions(), rules(), valn, false, backtracker());
               }
             }}
           />
         </label>
       </div>
-      <Show when={false}>
-        <RulesetDebug
-          possible_states={() => tileSet().map(([v]) => v)}
-          postMessage={postMessage}
-          state={ruleCheckerState}
-          setState={setRuleCheckerState}
-          baseSettings={() => ({
-            rules: rules(),
-            dimensions: dimensions(),
-            outputSize: size(),
-            seed: {
-              allowRandomization: randomSeed(),
-              value: seed(),
-            },
-          })}
-        />
-      </Show>
+      {/* <Show when={false}> */}
+      {/*   <RulesetDebug */}
+      {/*     possible_states={() => tileSet().map(([v]) => v)} */}
+      {/*     postMessage={postMessage} */}
+      {/*     state={ruleCheckerState} */}
+      {/*     setState={setRuleCheckerState} */}
+      {/*     baseSettings={() => ({ */}
+      {/*       rules: rules(), */}
+      {/*       dimensions: dimensions(), */}
+      {/*       outputSize: size(), */}
+      {/*       seed: { */}
+      {/*         allowRandomization: randomSeed(), */}
+      {/*         value: seed(), */}
+      {/*       }, */}
+      {/*     })} */}
+      {/*   /> */}
+      {/* </Show> */}
     </div>
   );
 };
