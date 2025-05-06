@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{BTreeSet, HashMap, VecDeque},
     num::NonZeroUsize,
 };
 
@@ -53,8 +53,8 @@ impl<
 
         // gather an area of tiles around the contradiction to reset
         // we increase the area the more contradictions there have been at this location
-        let mut locations_in_radius = HashSet::from([contradiction_location]);
-        let mut locations_neighboring_radius = HashSet::new();
+        let mut locations_in_radius = BTreeSet::from([contradiction_location]);
+        let mut locations_neighboring_radius = BTreeSet::new();
         let mut queue = VecDeque::from([(contradiction_location, 0)]);
         while let Some((current, distance)) = queue.pop_front() {
             println!("{current:?}, {distance}");
@@ -130,7 +130,7 @@ impl<
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeMap, BTreeSet};
+    use std::collections::{BTreeMap, BTreeSet, HashSet};
 
     use crate::{
         grid::{GridInterface, dynamic_2d::DynamicSizeGrid2D},

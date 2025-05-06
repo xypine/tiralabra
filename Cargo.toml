@@ -13,6 +13,7 @@ default = ["console_error_panic_hook"]
 
 [dev-dependencies]
 criterion = "0.5"
+rayon = "1.10.0" # Used for speeding up tests
 
 [[bench]]
 name = "propagation"

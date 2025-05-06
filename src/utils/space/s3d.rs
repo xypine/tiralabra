@@ -15,7 +15,9 @@ use super::{Direction, Location};
 pub const AXIS_3D: usize = 3;
 pub const NEIGHBOUR_COUNT_3D: usize = 2 * AXIS_3D;
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Tsify, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord, Tsify, Serialize, Deserialize,
+)]
 pub struct Vector3D<T: Copy> {
     pub x: T,
     pub y: T,

@@ -8,7 +8,7 @@ pub mod s2d;
 pub mod s3d;
 
 /// Dimension-agnostic Location
-pub trait Location: Debug + Hash + Eq + Copy {
+pub trait Location: Debug + Hash + Eq + Copy + Ord {
     /// returns the distance from zero
     fn length(&self) -> usize;
 }

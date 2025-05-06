@@ -15,7 +15,9 @@ use super::{Direction, Location};
 pub const AXIS_1D: usize = 1;
 pub const NEIGHBOUR_COUNT_1D: usize = 2 * AXIS_1D;
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Tsify, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord, Tsify, Serialize, Deserialize,
+)]
 pub struct Vector1D<T: Copy> {
     pub x: T,
 }

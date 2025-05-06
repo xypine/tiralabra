@@ -15,7 +15,9 @@ use super::{Direction, Location};
 pub const AXIS_2D: usize = 2;
 pub const NEIGHBOUR_COUNT_2D: usize = 2 * AXIS_2D;
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, Tsify, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Hash, Eq, PartialOrd, Ord, Tsify, Serialize, Deserialize,
+)]
 pub struct Vector2D<T: Copy> {
     pub x: T,
     pub y: T,

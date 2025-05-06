@@ -14,6 +14,7 @@
   packages = with pkgs; [
     # Allows running tests as code changes
     bacon
+    cargo-nextest
     # Code coverage
     cargo-tarpaulin
     cargo-mutants

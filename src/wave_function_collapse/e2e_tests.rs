@@ -1,4 +1,5 @@
 use crate::{
+    backtracking::{gradual_reset::BacktrackerByGradualReset, reset::BacktrackerByReset},
     grid::{GridInterface, constant_2d::ConstantSizeGrid2D, tests::assert_tile_state},
     tile::interface::TileInterface,
     utils::space::s2d::Location2D,
@@ -181,4 +182,82 @@ fn terrain() {
         };
         debug_print(&grid);
     }
+}
+#[test]
+fn flowers_blatant_rule_violations() {
+    use rayon::iter::IntoParallelIterator;
+    use rayon::iter::ParallelIterator;
+    use std::collections::BTreeSet;
+
+    const W: usize = 15;
+    const H: usize = 15;
+
+    let rules = crate::rules::samples::flowers_singlepixel::rules();
+
+    (0..1000).into_par_iter().for_each(|seed| {
+        let mut grid = ConstantSizeGrid2D::<W, H>::new(rules.clone(), seed);
+        let result = grid.run(150, Some(BacktrackerByReset {}));
+        match result {
+            Err(WaveFunctionCollapseInterruption::Finished) => {}
+            Err(_) => result.unwrap(),
+            Ok(_) => panic!("Grid should've finished"),
+        };
+        println!("seed {seed}");
+        debug_print(&grid);
+
+        for x in 0..W {
+            for y in 0..H {
+                let location = Location2D { x, y };
+                let mut tile = grid.get_tile(location).unwrap().clone();
+                let old_states: BTreeSet<_> = tile.possible_states().collect();
+                for (neighbour_dir, neighbour) in grid.get_neighbour_tiles(location) {
+                    if let Some(neighbour) = neighbour {
+                        let checked_states = rules.check(&tile, neighbour, neighbour_dir);
+                        tile.set_possible_states(checked_states);
+                    }
+                }
+                let checked_states: BTreeSet<_> = tile.possible_states().collect();
+                assert_eq!(old_states, checked_states);
+            }
+        }
+    });
+}
+#[test]
+fn flowers_blatant_rule_violations_gradual_reset() {
+    use rayon::iter::IntoParallelIterator;
+    use rayon::iter::ParallelIterator;
+    use std::collections::BTreeSet;
+
+    const W: usize = 15;
+    const H: usize = 15;
+
+    let rules = crate::rules::samples::flowers_singlepixel::rules();
+
+    (0..1000).into_par_iter().for_each(|seed| {
+        let mut grid = ConstantSizeGrid2D::<W, H>::new(rules.clone(), seed);
+        let result = grid.run(150, Some(BacktrackerByGradualReset::new()));
+        match result {
+            Err(WaveFunctionCollapseInterruption::Finished) => {}
+            Err(_) => result.unwrap(),
+            Ok(_) => panic!("Grid should've finished"),
+        };
+        println!("seed {seed}");
+        debug_print(&grid);
+
+        for x in 0..W {
+            for y in 0..H {
+                let location = Location2D { x, y };
+                let mut tile = grid.get_tile(location).unwrap().clone();
+                let old_states: BTreeSet<_> = tile.possible_states().collect();
+                for (neighbour_dir, neighbour) in grid.get_neighbour_tiles(location) {
+                    if let Some(neighbour) = neighbour {
+                        let checked_states = rules.check(&tile, neighbour, neighbour_dir);
+                        tile.set_possible_states(checked_states);
+                    }
+                }
+                let checked_states: BTreeSet<_> = tile.possible_states().collect();
+                assert_eq!(old_states, checked_states);
+            }
+        }
+    });
 }
