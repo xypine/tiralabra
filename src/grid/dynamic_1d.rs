@@ -82,24 +82,6 @@ impl DynamicSizeGrid1D {
         }
     }
 
-    /// Returns a copy of all tiles in the grid
-    pub fn dump(&self) -> Vec<Tile> {
-        self.tiles.clone()
-    }
-
-    pub fn dump_at_time(&self, i_max: usize) -> Vec<Tile> {
-        let mut tiles = vec![Tile::new(self.rules.possible.clone()); self.width];
-        let mut i = 0;
-        for (location, new_state) in &self.update_log {
-            tiles[self.location_to_index(*location)] = new_state.clone();
-            i += 1;
-            if i > i_max {
-                break;
-            }
-        }
-        tiles
-    }
-
     pub fn tiles_ref(&self) -> &Vec<Tile> {
         &self.tiles
     }
@@ -169,6 +151,19 @@ impl GridInterface<NEIGHBOUR_COUNT_1D, TileState, Location1D, Direction1D, Tile>
     fn get_tile(&self, location: Location1D) -> Option<&Tile> {
         let index = self.location_to_index(location);
         self.tiles.get(index)
+    }
+
+    fn get_tiles_at_time(&self, time_index: usize) -> HashMap<Location1D, Tile> {
+        let mut tiles = HashMap::new();
+        let mut i = 0;
+        for (location, new_state) in &self.update_log {
+            tiles.insert(*location, new_state.clone());
+            i += 1;
+            if i > time_index {
+                break;
+            }
+        }
+        tiles
     }
 
     fn get_neighbours(

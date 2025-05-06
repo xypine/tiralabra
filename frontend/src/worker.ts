@@ -2,7 +2,6 @@ import initSync, {
   Grid,
   Rules,
   Dimensions,
-  Tile,
   TileState,
   Direction2D,
   TileVisual,
@@ -169,7 +168,7 @@ function state(s: PersistentState, t?: number): State {
   // } else {
   //   tiles = s.grid.dump();
   // }
-  let rendered = s.grid.render(500, 500);
+  let rendered = s.grid.render(500, 500, t);
   return {
     ...dimensions,
     // tiles,

@@ -33,6 +33,8 @@ pub trait GridInterface<
 
     /// Useful for visuals, might not be most performant
     fn image(&self) -> HashMap<TPosition, T>;
+    /// this might not be that performant, mainly used for UI
+    fn get_tiles_at_time(&self, time_index: usize) -> HashMap<TPosition, T>;
 
     /// Returns a the requested tile if `location` falls inside the bounds of the grid
     fn get_tile(&self, location: TPosition) -> Option<&T>;

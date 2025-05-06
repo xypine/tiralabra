@@ -209,6 +209,10 @@ impl<const W: usize, const H: usize> GridInterface<4, TileState, Location2D, Dir
     fn get_rules(&self) -> &RuleSet<4, Direction2D> {
         &self.rules
     }
+
+    fn get_tiles_at_time(&self, _time_index: usize) -> HashMap<Location2D, Tile> {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]

@@ -160,20 +160,12 @@ impl Grid {
         }
     }
 
-    pub fn render(&self, w: usize, h: usize) -> String {
-        self.0.render(w, h)
-    }
-
-    pub fn dump(&self) -> Vec<Tile> {
-        self.0.dump()
+    pub fn render(&self, w: usize, h: usize, time: Option<usize>) -> String {
+        self.0.render(w, h, time)
     }
 
     pub fn get_history_len(&self) -> usize {
         self.0.update_log.len()
-    }
-
-    pub fn dump_at_time(&self, t: usize) -> Vec<Tile> {
-        self.0.dump_at_time(t)
     }
 
     pub fn is_finished(&self) -> bool {

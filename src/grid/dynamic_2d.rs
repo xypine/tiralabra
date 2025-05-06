@@ -35,7 +35,7 @@ pub struct DynamicSizeGrid2D {
     entropy_heap: BinaryHeap<EntropyHeapEntry>,
     /// Used to invalidate entries in the entropy_heap
     entropy_invalidation_matrix: Vec<usize>,
-    /// Keeps history of tile modifications for backtracking
+    /// Keeps history of tile modifications for UI
     pub update_log: Vec<(Location2D, Tile)>,
     /// Dictates random events
     #[tsify(type = "any")]
@@ -83,24 +83,6 @@ impl DynamicSizeGrid2D {
         } else {
             // no updated version is pushed, so it becomes impossible for the tile to be picked
         }
-    }
-
-    /// Returns a copy of all tiles in the grid
-    pub fn dump(&self) -> Vec<Tile> {
-        self.tiles.clone()
-    }
-
-    pub fn dump_at_time(&self, i_max: usize) -> Vec<Tile> {
-        let mut tiles = vec![Tile::new(self.rules.possible.clone()); self.width * self.height];
-        let mut i = 0;
-        for (location, new_state) in &self.update_log {
-            tiles[self.location_to_index(*location)] = new_state.clone();
-            i += 1;
-            if i > i_max {
-                break;
-            }
-        }
-        tiles
     }
 
     pub fn tiles_ref(&self) -> &Vec<Tile> {
@@ -211,6 +193,19 @@ impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
     fn get_tile(&self, location: Location2D) -> Option<&Tile> {
         let index = self.location_to_index(location);
         self.tiles.get(index)
+    }
+
+    fn get_tiles_at_time(&self, time_index: usize) -> HashMap<Location2D, Tile> {
+        let mut tiles = HashMap::new();
+        let mut i = 0;
+        for (location, new_state) in &self.update_log {
+            tiles.insert(*location, new_state.clone());
+            i += 1;
+            if i > time_index {
+                break;
+            }
+        }
+        tiles
     }
 
     fn get_neighbours(

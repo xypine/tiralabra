@@ -33,23 +33,18 @@ impl Tile {
     fn invalidate_cache(&mut self) {
         self.collapsed = self.possible_states.len() == 1;
     }
+}
 
-    pub fn new(possible: BTreeSet<TileState>) -> Self {
+impl TileInterface<TileState> for Tile {
+    fn new<I: IntoIterator<Item = TileState>>(possible: I) -> Self {
         let mut new = Self {
-            possible_states: possible,
+            possible_states: BTreeSet::from_iter(possible),
             collapsed: false,
         };
 
         new.invalidate_cache();
 
         new
-    }
-}
-
-impl TileInterface<TileState> for Tile {
-    #[inline]
-    fn possible_states(&self) -> impl Iterator<Item = TileState> {
-        self.possible_states.iter().cloned()
     }
 
     #[inline]
@@ -61,14 +56,13 @@ impl TileInterface<TileState> for Tile {
     }
 
     #[inline]
-    fn has_collapsed(&self) -> bool {
-        self.collapsed
+    fn possible_states(&self) -> impl Iterator<Item = TileState> {
+        self.possible_states.iter().cloned()
     }
 
     #[inline]
-    fn set_possible_states<I: IntoIterator<Item = TileState>>(&mut self, states: I) {
-        self.possible_states = BTreeSet::from_iter(states);
-        self.invalidate_cache();
+    fn has_collapsed(&self) -> bool {
+        self.collapsed
     }
 
     #[inline]
@@ -91,6 +85,12 @@ impl TileInterface<TileState> for Tile {
 
         self.set_possible_states([chosen_state]);
         Some(chosen_state)
+    }
+
+    #[inline]
+    fn set_possible_states<I: IntoIterator<Item = TileState>>(&mut self, states: I) {
+        self.possible_states = BTreeSet::from_iter(states);
+        self.invalidate_cache();
     }
 }
 

@@ -8,14 +8,19 @@ use crate::{
 
 use super::space::s2d::{Direction2D, NEIGHBOUR_COUNT_2D};
 
-pub trait CanvasRenderable<T: TileInterface<TileState>>:
+pub trait CanvasRenderable<T: TileInterface<TileState> + Clone>:
     GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, T>
 {
-    fn render(&self, total_w: usize, total_h: usize) -> String {
+    fn render(&self, total_w: usize, total_h: usize, time: Option<usize>) -> String {
         let Location2D {
             x: width,
             y: height,
         } = self.get_dimensions();
+        let tiles_at_t = if let Some(t) = time {
+            Some(self.get_tiles_at_time(t))
+        } else {
+            None
+        };
 
         let tiles_x = width as f64;
         let tiles_y = height as f64;
@@ -28,7 +33,12 @@ pub trait CanvasRenderable<T: TileInterface<TileState>>:
             for x in 0..width {
                 let css_x = x as f64 * cell_w;
                 let css_y = y as f64 * cell_h;
-                if let Some(tile) = self.get_tile(Location2D { x, y }) {
+                let tile_opt = if let Some(ref tiles_at_t) = tiles_at_t {
+                    tiles_at_t.get(&Location2D { x, y })
+                } else {
+                    self.get_tile(Location2D { x, y })
+                };
+                if let Some(tile) = tile_opt {
                     let states: Vec<_> = tile.possible_states_ref().collect();
                     if !states.is_empty() {
                         let mut lab_sum = Oklab::new(0.0, 0.0, 0.0);
@@ -81,7 +91,7 @@ pub trait CanvasRenderable<T: TileInterface<TileState>>:
     }
 }
 
-impl<T: TileInterface<TileState>> CanvasRenderable<T> for DynamicSizeGrid2D where
+impl<T: TileInterface<TileState> + Clone> CanvasRenderable<T> for DynamicSizeGrid2D where
     DynamicSizeGrid2D: GridInterface<4, TileState, Location2D, Direction2D, T>
 {
 }
