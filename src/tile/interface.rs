@@ -29,38 +29,11 @@ pub trait TileInterface<State: Hash + Eq + Copy> {
     /// "Entropy" is used to pick the best tile to collapse
     /// Basically tiles with few remaining possible states should have low entropy
     // automatically implemented for all types that implement TileInterface
-    #[inline]
     fn calculate_entropy<R: Rng>(
-        &self,
+        &mut self,
         weights: &HashMap<State, usize>,
         rng: &mut R,
-    ) -> Option<Entropy> {
-        if self.has_collapsed() {
-            return None;
-        }
-        let w: Vec<_> = self
-            .possible_states_ref()
-            .map(|s| weights.get(s).map(|&w| w as f64).unwrap_or(1.0))
-            .collect();
-
-        let sum: f64 = w.iter().sum();
-        if sum == 0.0 {
-            // No valid states
-            return Some(Entropy(0.0));
-        }
-
-        let term1 = sum.ln();
-        let term2 = w
-            .iter()
-            .filter(|&&wi| wi > 0.0)
-            .map(|&wi| wi * wi.ln())
-            .sum::<f64>()
-            / sum;
-
-        let entropy = term1 - term2;
-        let noise = rng.random::<f64>() * f64::EPSILON;
-        Some(Entropy(entropy + noise))
-    }
+    ) -> Option<Entropy>;
 
     /// Forces the tile into a single state.
     /// If no value is provided, one is chosen from the currently available states.

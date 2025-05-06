@@ -12,6 +12,7 @@ dependencies = [
  "getrandom 0.3.2",
  "image",
  "palette",
+ "priority-queue",
  "rand 0.9.0",
  "rand_chacha 0.9.0",
  "serde",
@@ -887,6 +888,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
+]
+
+[[package]]
+name = "priority-queue"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef08705fa1589a1a59aa924ad77d14722cb0cd97b67dd5004ed5f4a4873fce8d"
+dependencies = [
+ "autocfg",
+ "equivalent",
+ "indexmap",
+ "serde",
 ]
 
 [[package]]

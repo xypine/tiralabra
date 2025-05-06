@@ -1,8 +1,9 @@
 //! A Grid that can be initialized at any size
 //!
 
-use std::collections::{BinaryHeap, HashMap, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
+use priority_queue::PriorityQueue;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,7 @@ use crate::{
     rules::RuleSet,
     tile::{Tile, TileState, interface::TileInterface},
     utils::{
-        entropy::EntropyHeapEntry,
+        entropy::Entropy,
         space::s2d::{Delta2D, Direction2D, Location2D, NEIGHBOUR_COUNT_2D},
     },
     wave_function_collapse::{interface::WaveFunctionCollapse, propagate_from_tile},
@@ -32,9 +33,7 @@ pub struct DynamicSizeGrid2D {
     tiles: Vec<Tile>,
     /// Priority queue based on tile entropy
     #[tsify(type = "any")]
-    entropy_heap: BinaryHeap<EntropyHeapEntry>,
-    /// Used to invalidate entries in the entropy_heap
-    entropy_invalidation_matrix: Vec<usize>,
+    entropy_heap: PriorityQueue<Location2D, Entropy>,
     /// Keeps history of tile modifications for UI
     pub update_log: Vec<(Location2D, Tile)>,
     /// Dictates random events
@@ -67,21 +66,14 @@ impl DynamicSizeGrid2D {
     #[inline]
     fn update_tile_entropy(&mut self, location: Location2D) {
         let matrix_index = self.location_to_index(location);
-
-        let current_version = self.entropy_invalidation_matrix[matrix_index];
-        let new_version = current_version + 1;
-
-        self.entropy_invalidation_matrix[matrix_index] = new_version;
         if let Some(new_entropy) =
             self.tiles[matrix_index].calculate_entropy(&self.rules.weights, &mut self.rng)
         {
-            self.entropy_heap.push(EntropyHeapEntry {
-                location,
-                entropy: new_entropy,
-                version: new_version,
-            });
+            // priority_queue expects a max-heap, whereas our own previous implementation expected
+            // a min-heap, so we flip the entropy in this hacky way
+            self.entropy_heap.push(location, Entropy(-new_entropy.0));
         } else {
-            // no updated version is pushed, so it becomes impossible for the tile to be picked
+            self.entropy_heap.remove(&location);
         }
     }
 
@@ -98,14 +90,12 @@ impl DynamicSizeGrid2D {
         rng_seed: u64,
     ) -> Self {
         let tiles = vec![Tile::new(rules.possible.clone()); width * height];
-        let tile_invalidation_matrix = vec![0; width * height];
         let mut new = Self {
             width,
             height,
             rules: rules.clone(),
             tiles,
-            entropy_heap: BinaryHeap::new(),
-            entropy_invalidation_matrix: tile_invalidation_matrix,
+            entropy_heap: PriorityQueue::new(),
             update_log: Vec::new(),
             rng: ChaCha8Rng::seed_from_u64(rng_seed),
         };
@@ -246,22 +236,9 @@ impl GridInterface<NEIGHBOUR_COUNT_2D, TileState, Location2D, Direction2D, Tile>
     }
 
     fn get_lowest_entropy_position(&mut self) -> Option<Location2D> {
-        if let Some(candidate) = self.entropy_heap.peek() {
-            let candidate_index = self.location_to_index(candidate.location);
-            let current_version = self.entropy_invalidation_matrix[candidate_index];
-            // My implementation for invalidating entries in the entropy heap requires some
-            // extra work.
-            // Instead of removing entries from the heap when new versions come in, we ignore them
-            // at access time
-            if candidate.version < current_version {
-                let _ = self.entropy_heap.pop();
-                // this means that the access call can be recursive - at worst we need to scan and
-                // discard the entire heap
-                return self.get_lowest_entropy_position();
-            }
-            return Some(candidate.location);
-        }
-        None
+        self.entropy_heap
+            .peek()
+            .map(|(location, _entropy)| *location)
     }
 
     fn with_tile<R, F: Fn(&mut Tile, &mut ChaCha8Rng) -> R>(

@@ -14,6 +14,8 @@ use rand::{
 use serde::{Deserialize, Serialize};
 use tsify_next::{Tsify, declare};
 
+use crate::utils::entropy::Entropy;
+
 /// Represents a possible state that any tile in the grid can be collapsed into
 // We can find a better representation later, for now we'll just use the output of the rust hasher
 // trait
@@ -26,12 +28,15 @@ pub struct Tile {
     possible_states: BTreeSet<TileState>,
     // can be calculated from possible_states, but we can spare some memory for better performance
     collapsed: bool,
+    // same here
+    entropy: Option<Entropy>,
 }
 
 impl Tile {
     #[inline]
     fn invalidate_cache(&mut self) {
         self.collapsed = self.possible_states.len() == 1;
+        self.entropy = None;
     }
 }
 
@@ -40,6 +45,7 @@ impl TileInterface<TileState> for Tile {
         let mut new = Self {
             possible_states: BTreeSet::from_iter(possible),
             collapsed: false,
+            entropy: None,
         };
 
         new.invalidate_cache();
@@ -92,6 +98,44 @@ impl TileInterface<TileState> for Tile {
         self.possible_states = BTreeSet::from_iter(states);
         self.invalidate_cache();
     }
+
+    #[inline]
+    fn calculate_entropy<R: Rng>(
+        &mut self,
+        weights: &std::collections::HashMap<TileState, usize>,
+        rng: &mut R,
+    ) -> Option<Entropy> {
+        if self.has_collapsed() {
+            return None;
+        }
+        if let Some(cached) = self.entropy {
+            return Some(cached);
+        }
+        let w: Vec<_> = self
+            .possible_states_ref()
+            .map(|s| weights.get(s).map(|&w| w as f64).unwrap_or(1.0))
+            .collect();
+
+        let sum: f64 = w.iter().sum();
+        if sum == 0.0 {
+            // No valid states
+            return Some(Entropy(0.0));
+        }
+
+        let term1 = sum.ln();
+        let term2 = w
+            .iter()
+            .filter(|&&wi| wi > 0.0)
+            .map(|&wi| wi * wi.ln())
+            .sum::<f64>()
+            / sum;
+
+        let entropy = term1 - term2;
+        let noise = rng.random::<f64>() * f64::EPSILON;
+        let to_cache = Entropy(entropy + noise);
+        self.entropy = Some(to_cache);
+        Some(to_cache)
+    }
 }
 
 #[cfg(test)]
@@ -102,14 +146,14 @@ mod tests {
 
     #[test]
     fn entropy_calculation_sanity() {
-        let tile_0_states = Tile::new(BTreeSet::from([]));
+        let mut tile_0_states = Tile::new(BTreeSet::from([]));
         assert!(!tile_0_states.has_collapsed());
-        let tile_1_states = Tile::new(BTreeSet::from([1]));
+        let mut tile_1_states = Tile::new(BTreeSet::from([1]));
         assert!(tile_1_states.has_collapsed());
-        let tile_2_states = Tile::new(BTreeSet::from([1, 2]));
+        let mut tile_2_states = Tile::new(BTreeSet::from([1, 2]));
         assert!(!tile_2_states.has_collapsed());
-        let tile_3_states = Tile::new(BTreeSet::from([1, 2, 3]));
-        let tile_4_states_massive_weight = Tile::new(BTreeSet::from([1, 2, 3, 4]));
+        let mut tile_3_states = Tile::new(BTreeSet::from([1, 2, 3]));
+        let mut tile_4_states_massive_weight = Tile::new(BTreeSet::from([1, 2, 3, 4]));
         assert!(!tile_4_states_massive_weight.has_collapsed());
 
         let mut rng = rand::rng();
