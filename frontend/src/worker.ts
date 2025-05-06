@@ -227,8 +227,8 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     ).includes(e.data.type)
   ) {
     if (e.data.type === "tick") {
-      console.info("persiting image or a bit");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.info("persisting image for a bit");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
     s = await reset(

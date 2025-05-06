@@ -13,7 +13,7 @@ const App: Component = () => {
   const [size, setSize] = createSignal<number>(DEFAULT);
   const [rules, setRules] = createSignal<InbuiltRuleSet>("terrain");
   const [backtracker, setBacktracker] = createSignal<BacktrackerVariant | null>(
-    null,
+    BacktrackerVariant.GradualReset,
   );
   const dimensions = createMemo(() => {
     const s = size();
