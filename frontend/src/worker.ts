@@ -30,6 +30,7 @@ export const INBUILT_RULE_SETS = [
 export type InbuiltRuleSet = (typeof INBUILT_RULE_SETS)[number];
 
 export type BaseSettings = {
+  outputSize: number;
   dimensions: Dimensions;
   rules: InbuiltRuleSet;
   seed: Seed;
@@ -158,7 +159,7 @@ async function usePersistentState(basics: BaseSettings) {
   return { ...state, was_reset };
 }
 
-function state(s: PersistentState, t?: number): State {
+function state(s: PersistentState, outputSize: number, t?: number): State {
   const dimensions = s.grid.get_dimensions();
   const history_len = s.grid.get_history_len();
   // let tiles;
@@ -168,7 +169,7 @@ function state(s: PersistentState, t?: number): State {
   // } else {
   //   tiles = s.grid.dump();
   // }
-  let rendered = s.grid.render(500, 500, t);
+  let rendered = s.grid.render(outputSize, outputSize, t);
   return {
     ...dimensions,
     // tiles,
@@ -223,7 +224,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     }
     const resp: WorkerResponse = {
       type: "state_update",
-      state: state(s),
+      state: state(s, e.data.outputSize),
       tileset: s.tileset,
     };
     self.postMessage(resp);
@@ -246,13 +247,13 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     const resp: WorkerResponse = {
       type: "rule_check",
       allowed,
-      state: state(s),
+      state: state(s, e.data.outputSize),
     };
     self.postMessage(resp);
   } else if (e.data.type === "read_past") {
     const resp: WorkerResponse = {
       type: "state_update",
-      state: state(s, e.data.t),
+      state: state(s, e.data.outputSize, e.data.t),
     };
     self.postMessage(resp);
   } else {
@@ -267,7 +268,7 @@ async function tick(data: WorkerRequest, s: PersistentStateUpdate) {
   s.grid.tick();
   const resp: WorkerResponse = {
     type: "state_update",
-    state: state(s),
+    state: state(s, data.outputSize),
     tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
@@ -281,7 +282,7 @@ async function run(data: WorkerRequest, s: PersistentStateUpdate) {
   s.grid.run(dimensions.width * dimensions.height * 100);
   const resp: WorkerResponse = {
     type: "state_update",
-    state: state(s),
+    state: state(s, data.outputSize),
     tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);
@@ -299,7 +300,7 @@ async function collapse(data: WorkerRequest, s: PersistentStateUpdate) {
   );
   const resp: WorkerResponse = {
     type: "state_update",
-    state: state(s),
+    state: state(s, data.outputSize),
     tileset: s.was_reset ? s.tileset : undefined,
   };
   self.postMessage(resp);

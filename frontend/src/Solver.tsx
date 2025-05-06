@@ -23,16 +23,11 @@ import type {
   WorkerResponse,
 } from "./worker";
 import Worker from "./worker?worker";
-import Map, { TileSetContext } from "./Map";
 import RulesetDebug from "./RulesetDebug";
 import { pickRandomSeed } from "./utils";
 import { untrack } from "solid-js/web";
 
 export type VisualGrid = Map<Location2D, Tile>;
-
-function locationToIndex(location: Location2D, width: number): number {
-  return location.y * width + location.x;
-}
 
 const SOLVE_DELAY = 0 as const;
 
@@ -40,6 +35,19 @@ const Solver: Component<{
   dimensions: Accessor<Dimensions>;
   rules: Accessor<InbuiltRuleSet>;
 }> = ({ dimensions, rules }) => {
+  const [size, setSize] = createSignal(500);
+  const calculateMinViewportSize = () => {
+    const vw = window.innerWidth * 0.75;
+    const vh = window.innerHeight * 0.75;
+    const min = Math.min(vw, vh);
+    console.debug({ min });
+    setSize(min);
+  };
+  onMount(() => {
+    calculateMinViewportSize();
+    window.addEventListener("resize", calculateMinViewportSize);
+  });
+
   const [randomSeed, setRandomSeed] = createSignal<boolean>(true);
   const [seed, setSeed] = createSignal<number>(pickRandomSeed());
   const [state, setState] = createSignal<State | null>(null);
@@ -64,6 +72,7 @@ const Solver: Component<{
         type: "read_past",
         t: tti,
         dimensions: dimensions(),
+        outputSize: size(),
         rules: rules(),
         seed: {
           allowRandomization: randomSeed(),
@@ -81,6 +90,7 @@ const Solver: Component<{
         t: s.history_len,
         dimensions: dimensions(),
         rules: rules(),
+        outputSize: size(),
         seed: {
           allowRandomization: randomSeed(),
           value: seed(),
@@ -144,6 +154,7 @@ const Solver: Component<{
     const d = dimensions();
     const r = rules();
     untrack(() => {
+      calculateMinViewportSize();
       reset(d, r, seed(), randomSeed());
     });
   });
@@ -174,6 +185,7 @@ const Solver: Component<{
   ) {
     postMessage({
       type: "reset",
+      outputSize: size(),
       dimensions: d,
       rules: r,
       seed: {
@@ -187,6 +199,7 @@ const Solver: Component<{
     postMessage({
       type: "tick",
       dimensions: dimensions(),
+      outputSize: size(),
       rules: rules(),
       seed: {
         allowRandomization: randomSeed(),
@@ -198,6 +211,7 @@ const Solver: Component<{
     postMessage({
       type: "collapse",
       dimensions: dimensions(),
+      outputSize: size(),
       rules: rules(),
       x,
       y,
@@ -213,6 +227,7 @@ const Solver: Component<{
     postMessage({
       type: "run",
       dimensions: dimensions(),
+      outputSize: size(),
       rules: rules(),
       seed: {
         allowRandomization: randomSeed(),
@@ -242,7 +257,7 @@ const Solver: Component<{
   });
 
   return (
-    <TileSetContext tileset={tileSet}>
+    <div>
       <div>
         {/* <Map */}
         {/*   width={() => state()?.width ?? 0} */}
@@ -385,7 +400,7 @@ const Solver: Component<{
           />
         </label>
       </div>
-      <Show when={true}>
+      <Show when={false}>
         <RulesetDebug
           possible_states={() => tileSet().map(([v]) => v)}
           postMessage={postMessage}
@@ -394,6 +409,7 @@ const Solver: Component<{
           baseSettings={() => ({
             rules: rules(),
             dimensions: dimensions(),
+            outputSize: size(),
             seed: {
               allowRandomization: randomSeed(),
               value: seed(),
@@ -401,7 +417,7 @@ const Solver: Component<{
           })}
         />
       </Show>
-    </TileSetContext>
+    </div>
   );
 };
 
