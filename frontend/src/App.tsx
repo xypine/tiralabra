@@ -48,12 +48,20 @@ const App: Component = () => {
                 setRules(val as any);
               }}
             >
-              <option value="terrain">terrain</option>
-              <option value="flowers_singlepixel">flowers</option>
-              <option value="flowers">flowers 2</option>
-              <option value="terrain_simple">terrain simple</option>
-              <option value="checkers">checkers</option>
-              <option value="stripes">stripes</option>
+              <optgroup label="Samples">
+                <option value="flowers">flowers</option>
+                <option value="link">link</option>
+                <option value="village">village</option>
+                <option value="simple_wall">wall simple</option>
+                <option value="skyline2">skyline 2</option>
+              </optgroup>
+              <optgroup label="Test Patterns">
+                <option value="terrain">terrain</option>
+                <option value="flowers_singlepixel">flowers</option>
+                <option value="terrain_simple">terrain simple</option>
+                <option value="checkers">checkers</option>
+                <option value="stripes">stripes</option>
+              </optgroup>
             </select>
           </label>
           <label

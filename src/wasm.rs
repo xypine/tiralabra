@@ -130,7 +130,32 @@ impl Rules {
     }
 
     pub fn flowers() -> Self {
-        let inner: RuleSet2D = serde_json::from_str(include_str!("../rules.json"))
+        let inner: RuleSet2D = serde_json::from_str(include_str!("../samples/rules/flowers.json"))
+            .expect("failed to parse prebuilt rules.json");
+        Self(inner)
+    }
+
+    pub fn link() -> Self {
+        let inner: RuleSet2D = serde_json::from_str(include_str!("../samples/rules/link.json"))
+            .expect("failed to parse prebuilt rules.json");
+        Self(inner)
+    }
+
+    pub fn village() -> Self {
+        let inner: RuleSet2D = serde_json::from_str(include_str!("../samples/rules/village.json"))
+            .expect("failed to parse prebuilt rules.json");
+        Self(inner)
+    }
+
+    pub fn simple_wall() -> Self {
+        let inner: RuleSet2D =
+            serde_json::from_str(include_str!("../samples/rules/simple_wall.json"))
+                .expect("failed to parse prebuilt rules.json");
+        Self(inner)
+    }
+
+    pub fn skyline2() -> Self {
+        let inner: RuleSet2D = serde_json::from_str(include_str!("../samples/rules/skyline2.json"))
             .expect("failed to parse prebuilt rules.json");
         Self(inner)
     }

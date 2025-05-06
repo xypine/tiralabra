@@ -13,10 +13,7 @@ use crate::{
     tile::{Tile, TileState, interface::TileInterface},
     utils::{
         entropy::EntropyHeapEntry1D,
-        space::{
-            Location,
-            s1d::{Delta1D, Direction1D, Location1D, NEIGHBOUR_COUNT_1D},
-        },
+        space::s1d::{Delta1D, Direction1D, Location1D, NEIGHBOUR_COUNT_1D},
     },
 };
 

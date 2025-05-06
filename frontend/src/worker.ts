@@ -15,7 +15,6 @@ const worker_id = Math.floor(Math.random() * 1000);
 console.log(`Worker ${worker_id} loaded`);
 
 export type State = {
-  // tiles: Tile[];
   rendered: string;
   history_len: number;
   history_position?: number;
@@ -25,10 +24,14 @@ export type State = {
 export const INBUILT_RULE_SETS = [
   "terrain",
   "flowers_singlepixel",
-  "flowers",
   "terrain_simple",
   "checkers",
   "stripes",
+  "flowers",
+  "link",
+  "village",
+  "simple_wall",
+  "skyline2",
 ] as const;
 export type InbuiltRuleSet = (typeof INBUILT_RULE_SETS)[number];
 
@@ -107,6 +110,18 @@ function getRules(ruleset: InbuiltRuleSet) {
       break;
     case "flowers":
       rules = Rules.flowers();
+      break;
+    case "link":
+      rules = Rules.link();
+      break;
+    case "village":
+      rules = Rules.village();
+      break;
+    case "simple_wall":
+      rules = Rules.simple_wall();
+      break;
+    case "skyline2":
+      rules = Rules.skyline2();
       break;
     // default:
     //   throw new Error("Unknown ruleset: '" + ruleset + "'");
