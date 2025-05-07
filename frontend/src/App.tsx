@@ -1,17 +1,33 @@
 import Solver from "./Solver";
 
 import styles from "./App.module.css";
-import { Component, createMemo, createSignal } from "solid-js";
+import {
+  Component,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+} from "solid-js";
 import { InbuiltRuleSet } from "./worker";
 import { BacktrackerVariant } from "aaltofunktionromautus";
+import { makePersisted } from "@solid-primitives/storage";
+import { CustomRule } from "./utils";
+import { Extractor } from "./Extractor";
 
 const MAX = 150;
 const MIN = 2;
 const DEFAULT = 30;
 
 const App: Component = () => {
+  const [customRules, setCustomRules, init] = makePersisted(
+    createSignal<CustomRule[]>([]),
+    { name: "custom_rules" },
+  );
+  createResource(() => init)[0]();
   const [size, setSize] = createSignal<number>(DEFAULT);
-  const [rules, setRules] = createSignal<InbuiltRuleSet>("terrain");
+  const [rules, setRules] = createSignal<InbuiltRuleSet | CustomRule>(
+    "terrain",
+  );
   const [backtracker, setBacktracker] = createSignal<BacktrackerVariant | null>(
     BacktrackerVariant.GradualReset,
   );
@@ -24,7 +40,7 @@ const App: Component = () => {
   });
   return (
     <div class={styles.App}>
-      <header class={styles.header}>
+      <div class={styles.header}>
         <div
           style={{
             "font-size": "1rem",
@@ -42,10 +58,14 @@ const App: Component = () => {
           >
             Ruleset
             <select
-              value={rules()}
+              value={(() => {
+                const r = rules();
+                return typeof r === "string" ? r : r.name;
+              })()}
               onChange={(e) => {
                 const val = e.target.value;
-                setRules(val as any);
+                const custom = customRules().find((r) => r.name === val);
+                setRules(custom ?? (val as any));
               }}
             >
               <optgroup label="Samples">
@@ -62,6 +82,11 @@ const App: Component = () => {
                 <option value="checkers">checkers</option>
                 <option value="stripes">stripes</option>
               </optgroup>
+              <optgroup label="Custom Rules">
+                <For each={customRules()}>
+                  {(r) => <option value={r.name}>{r.name}</option>}
+                </For>
+              </optgroup>
             </select>
           </label>
           <label
@@ -74,8 +99,8 @@ const App: Component = () => {
             grid size
             <input
               type="number"
-              min={3}
-              max={100}
+              min={MIN}
+              max={MAX}
               value={size()}
               onChange={(e) => {
                 const val = e.target.value;
@@ -116,13 +141,23 @@ const App: Component = () => {
               <option value="1">gradual reset</option>
             </select>
           </label>
+          <details style={{ background: "#1D2021", padding: "0.2rem 0.1rem" }}>
+            <summary style={{ cursor: "pointer" }}>Rule Creator</summary>
+            <Extractor
+              customRules={customRules}
+              setCustomRules={setCustomRules}
+              setRules={setRules}
+            />
+          </details>
         </div>
         <Solver
           dimensions={dimensions}
           rules={rules}
           backtracker={backtracker}
+          customRules={customRules}
+          setCustomRules={setCustomRules}
         />
-      </header>
+      </div>
     </div>
   );
 };

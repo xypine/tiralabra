@@ -16,11 +16,7 @@ pub trait CanvasRenderable<T: TileInterface<TileState> + Clone>:
             x: width,
             y: height,
         } = self.get_dimensions();
-        let tiles_at_t = if let Some(t) = time {
-            Some(self.get_tiles_at_time(t))
-        } else {
-            None
-        };
+        let tiles_at_t = time.map(|t| self.get_tiles_at_time(t));
 
         let tiles_x = width as f64;
         let tiles_y = height as f64;

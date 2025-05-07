@@ -313,6 +313,7 @@ pub mod samples {
                 (STATE_GROUND, Direction2D::UP, STATE_EDGE_R),
                 // Allow soil on top of ground
                 (STATE_SOIL, Direction2D::DOWN, STATE_GROUND),
+                (STATE_STEM, Direction2D::DOWN, STATE_SOIL),
                 (STATE_SOIL, Direction2D::LEFT, STATE_EDGE_L),
                 (STATE_SOIL, Direction2D::RIGHT, STATE_EDGE_R),
                 // Allow soil next to soil
@@ -323,7 +324,7 @@ pub mod samples {
                 (STATE_SOIL, Direction2D::LEFT, STATE_STEM),
                 (STATE_SOIL, Direction2D::RIGHT, STATE_STEM),
                 // Allow stem on top of stem
-                (STATE_STEM, Direction2D::DOWN, STATE_STEM),
+                // (STATE_STEM, Direction2D::DOWN, STATE_STEM),
                 (STATE_BRANCH, Direction2D::DOWN, STATE_STEM),
                 (STATE_CURVE_L, Direction2D::DOWN, STATE_STEM),
                 (STATE_CURVE_R, Direction2D::DOWN, STATE_STEM),

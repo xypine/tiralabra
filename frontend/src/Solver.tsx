@@ -2,10 +2,12 @@ import {
   Accessor,
   createEffect,
   createMemo,
+  createResource,
   createSignal,
   on,
   onCleanup,
   onMount,
+  Setter,
   Show,
   type Component,
 } from "solid-js";
@@ -24,9 +26,10 @@ import type {
 } from "./worker";
 import Worker from "./worker?worker";
 import RulesetDebug from "./RulesetDebug";
-import { pickRandomSeed } from "./utils";
+import { CustomRule, pickRandomSeed } from "./utils";
 import { untrack } from "solid-js/web";
 import { BacktrackerVariant } from "../pkg/aaltofunktionromautus";
+import { Extractor } from "./Extractor";
 
 export type VisualGrid = Map<Location2D, Tile>;
 
@@ -34,9 +37,11 @@ const SOLVE_DELAY = 0 as const;
 
 const Solver: Component<{
   dimensions: Accessor<Dimensions>;
-  rules: Accessor<InbuiltRuleSet>;
+  rules: Accessor<InbuiltRuleSet | CustomRule>;
   backtracker: Accessor<BacktrackerVariant | null>;
-}> = ({ dimensions, rules, backtracker }) => {
+  customRules: Accessor<CustomRule[]>;
+  setCustomRules: Setter<CustomRule[]>;
+}> = ({ dimensions, rules, backtracker, customRules, setCustomRules }) => {
   const [size, setSize] = createSignal(500);
   const calculateMinViewportSize = () => {
     const vw = window.innerWidth * 0.75;
@@ -113,6 +118,9 @@ const Solver: Component<{
     const w = new Worker();
     w.onmessage = (event) => {
       let data: WorkerResponse = event.data;
+      if (data.type === "extracted_rules") {
+        return;
+      }
       // console.debug("ui got message", { data });
       let newState = data.state;
       if (newState.seed !== seed()) {
@@ -164,6 +172,26 @@ const Solver: Component<{
     });
   });
 
+  createMemo(() => {
+    const cr = customRules();
+    console.info("updating custom rules");
+    untrack(() => {
+      postMessage({
+        type: "setCustomRules",
+        customRules: cr,
+
+        outputSize: size(),
+        dimensions: dimensions(),
+        rules: rules(),
+        seed: {
+          allowRandomization: randomSeed(),
+          value: seed(),
+        },
+        backtracker: backtracker(),
+      });
+    });
+  });
+
   // const tiles = () => {
   //   const s = state();
   //   if (!s) {
@@ -183,10 +211,10 @@ const Solver: Component<{
 
   function reset(
     d: Dimensions,
-    r: InbuiltRuleSet,
+    r: InbuiltRuleSet | CustomRule,
     seed: number,
     allowRandomization: boolean,
-    backtracker: BacktrackerVariant,
+    backtracker: BacktrackerVariant | null,
     activate = false,
   ) {
     postMessage({
@@ -296,7 +324,10 @@ const Solver: Component<{
         {/*     } */}
         {/*   }} */}
         {/* /> */}
-        <div innerHTML={state()?.rendered} />
+        <div
+          style={{ "min-width": size() + "px", "min-height": size() + "px" }}
+          innerHTML={state()?.rendered}
+        />
         <div
           style={{
             "margin-top": "1.5rem",

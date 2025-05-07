@@ -1,8 +1,12 @@
 //! Interface and structures that can be used in the browser through Web Assembly
 //! TypeScript types are automatically generated using Tsify
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    io::Cursor,
+};
 
+use image::ImageReader;
 use serde::{Deserialize, Serialize};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
@@ -14,6 +18,10 @@ use crate::{
     grid::dynamic_2d::DynamicSizeGrid2D,
     rules::RuleSet2D,
     tile::{Tile, TileState, interface::TileInterface},
+    tile_extraction::{
+        TileExtractor,
+        overlapping_bitmap::{OverlappingBitmapExtractor, OverlappingBitmapExtractorOptions},
+    },
     utils::{
         render::CanvasRenderable,
         space::s2d::{Direction2D, Location2D},
@@ -158,6 +166,24 @@ impl Rules {
         let inner: RuleSet2D = serde_json::from_str(include_str!("../samples/rules/skyline2.json"))
             .expect("failed to parse prebuilt rules.json");
         Self(inner)
+    }
+
+    pub fn from_json(rules: String) -> Self {
+        let inner: RuleSet2D = serde_json::from_str(&rules).expect("failed to parse rules.json");
+        Self(inner)
+    }
+
+    pub fn extract_rules_from_bitmap(
+        image_bytes: Vec<u8>,
+        options: OverlappingBitmapExtractorOptions,
+    ) -> String {
+        let img = ImageReader::new(Cursor::new(image_bytes))
+            .with_guessed_format()
+            .expect("failed to guess image format")
+            .decode()
+            .expect("failed to decode image");
+        let extractor = OverlappingBitmapExtractor::new(img, options);
+        serde_json::to_string(extractor.get_rules()).expect("failed to serialize rules")
     }
 }
 

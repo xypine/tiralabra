@@ -4,6 +4,8 @@ use std::{
 };
 
 use image::DynamicImage;
+use serde::{Deserialize, Serialize};
+use tsify_next::Tsify;
 
 use crate::{
     rules::RuleSet2D,
@@ -17,7 +19,8 @@ use super::{
     helpers::{edges_match, img_to_repr, pattern_to_image},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Tsify, Serialize, Deserialize)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct OverlappingBitmapExtractorOptions {
     /// Extracted tiles are n ✖ n pixels
     pub n: usize,

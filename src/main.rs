@@ -1,3 +1,6 @@
+//! Utility program that extracts rules from sample images
+//! lib.rs is the correct entrypoint for the library
+
 use std::fs;
 
 use aaltofunktionromautus::{
@@ -70,6 +73,24 @@ pub fn main() {
             n: 3,
             periodic_input: true,
             symmetry: 2,
+        },
+    );
+    extract_rules_to_json(
+        "./samples/edge.png",
+        "./samples/rules/edge.json",
+        OverlappingBitmapExtractorOptions {
+            n: 3,
+            periodic_input: false,
+            symmetry: 1,
+        },
+    );
+    extract_rules_to_json(
+        "./samples/Water.png",
+        "./samples/rules/water.json",
+        OverlappingBitmapExtractorOptions {
+            n: 3,
+            periodic_input: false,
+            symmetry: 1,
         },
     );
 

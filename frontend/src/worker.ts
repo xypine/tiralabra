@@ -8,8 +8,10 @@ import initSync, {
   Backtracker2D,
   BacktrackerVariant,
   new_backtracker,
+  OverlappingBitmapExtractorOptions,
+  RuleSet,
 } from "aaltofunktionromautus";
-import { pickRandomSeed, Seed } from "./utils";
+import { CustomRule, pickRandomSeed, Seed } from "./utils";
 
 const worker_id = Math.floor(Math.random() * 1000);
 console.log(`Worker ${worker_id} loaded`);
@@ -38,59 +40,75 @@ export type InbuiltRuleSet = (typeof INBUILT_RULE_SETS)[number];
 export type BaseSettings = {
   outputSize: number;
   dimensions: Dimensions;
-  rules: InbuiltRuleSet;
+  rules: InbuiltRuleSet | CustomRule;
   seed: Seed;
   backtracker: BacktrackerVariant | null;
 };
 
-export type WorkerRequest = BaseSettings &
-  (
-    | {
-        type: "reset";
-      }
-    | {
-        type: "tick";
-      }
-    | {
-        type: "run";
-      }
-    | {
-        type: "read_past";
-        t: number;
-      }
-    | {
-        type: "collapse";
-        x: number;
-        y: number;
-        state?: bigint;
-      }
-    | {
-        type: "rule_check";
-        from: TileState[];
-        target: TileState[];
-        direction: Direction2D;
-      }
-  );
+export type WorkerRequest =
+  | (BaseSettings &
+      (
+        | {
+            type: "setCustomRules";
+            customRules: CustomRule[];
+          }
+        | {
+            type: "reset";
+          }
+        | {
+            type: "tick";
+          }
+        | {
+            type: "run";
+          }
+        | {
+            type: "read_past";
+            t: number;
+          }
+        | {
+            type: "collapse";
+            x: number;
+            y: number;
+            state?: bigint;
+          }
+        | {
+            type: "rule_check";
+            from: TileState[];
+            target: TileState[];
+            direction: Direction2D;
+          }
+      ))
+  | {
+      type: "extract_rules";
+      name: string;
+      source: Uint8Array;
+      options: OverlappingBitmapExtractorOptions;
+    };
 
-export type WorkerResponse = {
-  state: State;
-} & {
-  tileset?: TileVisual[];
-} & (
-    | {
-        type: "state_update";
-      }
-    | {
-        type: "tick_update";
-        result: boolean | undefined;
-      }
-    | {
-        type: "rule_check";
-        allowed: TileState[];
-      }
-  );
+export type WorkerResponse =
+  | ({
+      state: State;
+    } & {
+      tileset?: TileVisual[];
+    } & (
+        | {
+            type: "state_update";
+          }
+        | {
+            type: "tick_update";
+            result: boolean | undefined;
+          }
+        | {
+            type: "rule_check";
+            allowed: TileState[];
+          }
+      ))
+  | {
+      type: "extracted_rules";
+      result: CustomRule;
+    };
 
-function getRules(ruleset: InbuiltRuleSet) {
+function getRules(ruleset: InbuiltRuleSet | CustomRule) {
   let rules;
   switch (ruleset) {
     case "terrain":
@@ -123,7 +141,9 @@ function getRules(ruleset: InbuiltRuleSet) {
     case "skyline2":
       rules = Rules.skyline2();
       break;
-    // default:
+    default:
+      rules = Rules.from_json(ruleset.rules);
+      break;
     //   throw new Error("Unknown ruleset: '" + ruleset + "'");
   }
   return rules;
@@ -146,8 +166,9 @@ async function initWasm() {
 async function reset(
   seed: number,
   dimensions: Dimensions,
-  ruleset: InbuiltRuleSet,
+  ruleset: InbuiltRuleSet | CustomRule,
   backtrackerVariant: BacktrackerVariant | null,
+  customRules: CustomRule[],
   cause: string,
 ) {
   console.info("reset", { dimensions, ruleset, backtrackerVariant, cause });
@@ -169,6 +190,7 @@ async function reset(
     seed,
     history_cache: new Map(),
     tickBacktracker: backtracker,
+    customRules,
   };
   console.info({ persistent_state });
   return persistent_state;
@@ -180,10 +202,14 @@ type PersistentState = {
   tickBacktracker: Backtracker2D | null;
   seed: number;
   history_cache: Map<number, State>;
+  customRules: CustomRule[];
 };
 type PersistentStateUpdate = PersistentState & { was_reset?: boolean };
 let persistent_state: PersistentState | undefined = undefined;
-async function usePersistentState(basics: BaseSettings) {
+async function usePersistentState(
+  basics: BaseSettings,
+  customRules?: CustomRule[],
+) {
   let state = persistent_state;
   let was_reset = false;
   if (state === undefined) {
@@ -192,10 +218,13 @@ async function usePersistentState(basics: BaseSettings) {
       basics.dimensions,
       basics.rules,
       basics.backtracker,
+      customRules ?? [],
       "init",
     );
     persistent_state = state;
     was_reset = true;
+  } else if (customRules) {
+    state.customRules = customRules;
   }
   return { ...state, was_reset };
 }
@@ -228,8 +257,25 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     initPromise = initWasm();
   }
   await initPromise;
-
-  let s: PersistentStateUpdate = await usePersistentState(e.data);
+  if (e.data.type === "extract_rules") {
+    const rules = Rules.extract_rules_from_bitmap(
+      e.data.source,
+      e.data.options,
+    );
+    postMessage({
+      type: "extracted_rules",
+      result: {
+        name: e.data.name,
+        options: e.data.options,
+        rules: rules,
+      },
+    } satisfies WorkerResponse);
+    return;
+  }
+  let s: PersistentStateUpdate = await usePersistentState(
+    e.data,
+    e.data.type === "setCustomRules" ? e.data.customRules : undefined,
+  );
   let seedForReset = e.data.seed.value;
   if (e.data.seed.allowRandomization && e.data.type !== "reset") {
     seedForReset = pickRandomSeed();
@@ -251,17 +297,25 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       e.data.dimensions,
       e.data.rules,
       e.data.backtracker,
+      s.customRules,
       "grid was finished",
     );
   }
 
-  if (e.data.type === "reset") {
+  if (e.data.type === "setCustomRules") {
+    const resp: WorkerResponse = {
+      type: "state_update",
+      state: state(s, e.data.outputSize),
+    };
+    self.postMessage(resp);
+  } else if (e.data.type === "reset") {
     if (!s.was_reset) {
       s = await reset(
         seedForReset,
         e.data.dimensions,
         e.data.rules,
         e.data.backtracker,
+        s.customRules,
         "requested",
       );
     }
