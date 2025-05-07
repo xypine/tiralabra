@@ -196,7 +196,7 @@ fn flowers_blatant_rule_violations() {
 
     (0..1000).into_par_iter().for_each(|seed| {
         let mut grid = ConstantSizeGrid2D::<W, H>::new(rules.clone(), seed);
-        let result = grid.run(150, Some(BacktrackerByReset {}));
+        let result = grid.run(500, Some(BacktrackerByReset {}));
         match result {
             Err(WaveFunctionCollapseInterruption::Finished) => {}
             Err(_) => result.unwrap(),
@@ -235,7 +235,7 @@ fn flowers_blatant_rule_violations_gradual_reset() {
 
     (0..1000).into_par_iter().for_each(|seed| {
         let mut grid = ConstantSizeGrid2D::<W, H>::new(rules.clone(), seed);
-        let result = grid.run(150, Some(BacktrackerByGradualReset::default()));
+        let result = grid.run(500, Some(BacktrackerByGradualReset::default()));
         match result {
             Err(WaveFunctionCollapseInterruption::Finished) => {}
             Err(_) => result.unwrap(),
