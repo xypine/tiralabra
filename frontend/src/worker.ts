@@ -9,7 +9,6 @@ import initSync, {
   BacktrackerVariant,
   new_backtracker,
   OverlappingBitmapExtractorOptions,
-  RuleSet,
 } from "aaltofunktionromautus";
 import { CustomRule, pickRandomSeed, Seed } from "./utils";
 
@@ -26,6 +25,7 @@ export type State = {
 export const INBUILT_RULE_SETS = [
   "terrain",
   "flowers_singlepixel",
+  "bubblewrap",
   "terrain_simple",
   "checkers",
   "stripes",
@@ -116,6 +116,9 @@ function getRules(ruleset: InbuiltRuleSet | CustomRule) {
       break;
     case "flowers_singlepixel":
       rules = Rules.flowers_singlepixel();
+      break;
+    case "bubblewrap":
+      rules = Rules.bubblewrap();
       break;
     case "terrain_simple":
       rules = Rules.terrain_simple();

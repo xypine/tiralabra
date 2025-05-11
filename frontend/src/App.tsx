@@ -81,6 +81,7 @@ const App: Component = () => {
                 <option value="terrain_simple">terrain simple</option>
                 <option value="checkers">checkers</option>
                 <option value="stripes">stripes</option>
+                <option value="bubblewrap">bubblewrap</option>
               </optgroup>
               <optgroup label="Custom Rules">
                 <For each={customRules()}>

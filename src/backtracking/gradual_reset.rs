@@ -45,11 +45,15 @@ impl<
         let resets = self
             .reset_count
             .get(&contradiction_location)
-            .map(|&u| u.checked_add(1).unwrap())
-            .unwrap_or(NonZeroUsize::new(1).unwrap());
-        self.reset_count.insert(contradiction_location, resets);
+            .cloned()
+            .map(usize::from)
+            .unwrap_or_default();
+        self.reset_count.insert(
+            contradiction_location,
+            NonZeroUsize::new(resets + 1).unwrap(),
+        );
 
-        let max_radius = (usize::from(resets) + self.base_radius).pow(2);
+        let max_radius = 2usize.pow((resets + self.base_radius) as u32);
 
         // gather an area of tiles around the contradiction to reset
         // we increase the area the more contradictions there have been at this location
@@ -57,22 +61,22 @@ impl<
         let mut locations_neighboring_radius = BTreeSet::new();
         let mut queue = VecDeque::from([(contradiction_location, 0)]);
         while let Some((current, distance)) = queue.pop_front() {
-            println!("{current:?}, {distance}");
-            if distance > max_radius {
+            if distance >= max_radius {
                 continue;
             }
 
             for (_, neighbour) in grid.get_neighbours(current) {
+                let distance = distance + 1;
                 if let Some(neighbour) = neighbour
                     && !locations_in_radius.contains(&neighbour)
                 {
                     let target = if distance == max_radius {
-                        &mut locations_in_radius
-                    } else {
                         &mut locations_neighboring_radius
+                    } else {
+                        &mut locations_in_radius
                     };
-                    if target.insert(neighbour) && distance < (max_radius - 1) {
-                        queue.push_back((neighbour, distance + 1));
+                    if target.insert(neighbour) {
+                        queue.push_back((neighbour, distance));
                     }
                 }
             }
@@ -92,13 +96,6 @@ impl<
             grid.with_tile(*location, |t, _| {
                 t.set_possible_states(rules_possible.clone());
             });
-            // update the reset counter
-            let resets = self
-                .reset_count
-                .get(location)
-                .map(|&u| u.checked_add(1).unwrap())
-                .unwrap_or(NonZeroUsize::new(1).unwrap());
-            self.reset_count.insert(contradiction_location, resets);
         }
 
         let mut propagation_queue = VecDeque::new();
@@ -193,7 +190,8 @@ mod tests {
             .expect("contradiction should've resolved");
 
         let backtracker_values_sum: usize = b.reset_count.values().cloned().map(usize::from).sum();
-        assert_eq!(backtracker_values_sum, 2);
+        println!("{:?}", b.reset_count);
+        assert_eq!(backtracker_values_sum, 1);
 
         for y in 0..2 {
             for x in 0..2 {
@@ -217,7 +215,8 @@ mod tests {
             .expect("contradiction should've resolved");
 
         let backtracker_values_sum: usize = b.reset_count.values().cloned().map(usize::from).sum();
-        assert_eq!(backtracker_values_sum, 4);
+        println!("{:?}", b.reset_count);
+        assert_eq!(backtracker_values_sum, 2);
 
         for y in 0..2 {
             for x in 0..2 {
@@ -234,7 +233,8 @@ mod tests {
             .expect("contradiction should've resolved");
 
         let backtracker_values_sum: usize = b.reset_count.values().cloned().map(usize::from).sum();
-        assert_eq!(backtracker_values_sum, 6);
+        println!("{:?}", b.reset_count);
+        assert_eq!(backtracker_values_sum, 3);
 
         for y in 0..2 {
             for x in 0..2 {

@@ -3,11 +3,13 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
-pub mod s1d;
 pub mod s2d;
-
-// not used
-//pub mod s3d;
+// 1d or 3d versions are not a part of the core algorithm
+// as such, they won't be unit tested
+#[cfg(not(tarpaulin_include))]
+pub mod s1d;
+#[cfg(not(tarpaulin_include))]
+pub mod s3d;
 
 /// Dimension-agnostic Location
 pub trait Location: Debug + Hash + Eq + Copy + Ord {

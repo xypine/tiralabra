@@ -1,3 +1,5 @@
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
 use crate::{
     backtracking::{gradual_reset::BacktrackerByGradualReset, reset::BacktrackerByReset},
     grid::{GridInterface, constant_2d::ConstantSizeGrid2D, tests::assert_tile_state},
@@ -126,6 +128,40 @@ fn stripes() {
 }
 
 #[test]
+fn bubblewrap() {
+    const W: usize = 44;
+    const H: usize = 40;
+
+    (2..12).into_par_iter().for_each(|state_count| {
+        let rules = crate::rules::samples::bubble_wrap::rules(state_count);
+        let mut grid = ConstantSizeGrid2D::<W, H>::new(rules, 0);
+        for _ in 0..(W * H) {
+            let result = grid.run::<BacktrackerByReset>(1, None);
+            if let Err(WaveFunctionCollapseInterruption::MaxIterationsReached) = result {
+                // as expected
+            } else {
+                result.unwrap();
+            }
+            for x in 0..W {
+                for y in 0..H {
+                    let tile = grid.get_tile(Location2D { x, y }).unwrap();
+                    let collapsed = tile.has_collapsed();
+                    let all_possible_states_still_possible =
+                        tile.possible_states_ref().count() == state_count;
+                    assert!(collapsed || all_possible_states_still_possible, "if all states are allowed next to another, tiles should always be either collapsed or have the ability to collapse into any state");
+                }
+            }
+        }
+        let result = grid.run::<BacktrackerByReset>(1, None);
+        if let Err(WaveFunctionCollapseInterruption::Finished) = result {
+            // as expected
+        } else {
+            result.unwrap();
+        }
+    });
+}
+
+#[test]
 fn flowers_a() {
     use crate::rules::samples::flowers_singlepixel::STATE_GROUND;
     const W: usize = 9;
@@ -148,9 +184,14 @@ fn flowers_a() {
         for y in 0..H {
             let tile = grid.get_tile(Location2D { x, y }).unwrap();
             if y < 2 || x < 2 || x > W - 3 {
-                assert!(tile.has_collapsed(), "all edge tiles should've collapsed")
+                assert!(tile.has_collapsed(), "all edge tiles should've collapsed");
             } else if y == H - 1 {
                 assert_tile_state(&tile, STATE_GROUND);
+                assert_eq!(
+                    grid.get_rules()
+                        .represent_tile(*tile.possible_states_ref().next().unwrap()),
+                    Some(0xff000000)
+                );
             } else {
                 if tile.has_collapsed() {
                     println!("{x}, {y} was collapsed!");

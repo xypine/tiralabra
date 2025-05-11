@@ -401,4 +401,42 @@ pub mod samples {
             )
         }
     }
+
+    /// "bubble wrap" ruleset for testing, where N states are all allowed next to each other.
+    pub mod bubble_wrap {
+        use super::*;
+
+        pub fn rules(n_states: usize) -> RuleSet2D {
+            let mut possible = BTreeSet::new();
+            let mut allowed = HashSet::new();
+            let mut state_representations = HashMap::new();
+
+            // Generate N states
+            for i in 0..n_states {
+                let state = i as u64;
+                possible.insert(state);
+                let gray_value = (255 * i / (n_states - 1).max(1)) as u32;
+                let color = 0xFF000000 | (gray_value << 16) | (gray_value << 8) | gray_value;
+                state_representations.insert(state, color);
+            }
+
+            // All states are allowed next to each other in all 2D directions
+            for &state1 in possible.iter() {
+                for &state2 in possible.iter() {
+                    for dir_index in 0..NEIGHBOUR_COUNT_2D {
+                        let dir = Direction2D::try_from(dir_index).unwrap();
+                        allowed.insert((state1, dir, state2));
+                    }
+                }
+            }
+
+            RuleSet::new(
+                possible,
+                allowed,
+                HashMap::new(),
+                state_representations,
+                BTreeMap::new(),
+            )
+        }
+    }
 }
