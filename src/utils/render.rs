@@ -42,7 +42,7 @@ pub trait CanvasRenderable<T: TileInterface<TileState> + Clone>:
                         let mut count = 0.0;
 
                         for state in states {
-                            if let Some(color) = self.get_rules().visualize_tile(*state) {
+                            if let Some(color) = self.get_rules().represent_tile(*state) {
                                 let a = ((color >> 24) & 0xFF) as f32 / 255.0;
                                 let r = ((color >> 16) & 0xFF) as f32 / 255.0;
                                 let g = ((color >> 8) & 0xFF) as f32 / 255.0;

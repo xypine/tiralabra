@@ -5,44 +5,52 @@ edition = "2024"
 
 [package.metadata]
 
-[lib]
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
+
+[lib] # We need to build a cdylib for wasm
 crate-type = ["cdylib", "rlib"]
 
-[features]
+[features] # Enable custom panic hook for wasm by default
 default = ["console_error_panic_hook"]
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.5" # Used for performance testing
 rayon = "1.10.0" # Used for speeding up tests
 
+# Performance tests
 [[bench]]
 name = "propagation"
 harness = false
-
 [[bench]]
 name = "evaluation"
 harness = false
 
 [dependencies]
-getrandom = { version = "0.3", features = ["wasm_js"] }
+# Deterministic RNG
 rand = "0.9.0"
-thiserror = "2.0.12"
-
+getrandom = { version = "0.3", features = ["wasm_js"] }
+rand_chacha = { version = "0.9", features = ["serde"] }
+# Handy way to define error enums
+thiserror = "2.0"
+# Automatic Serialization / Deserialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# A priority queue that supports invalidation of entries
+priority-queue = { version = "2.3", features = ["serde"] }
+# WASM
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.6"
+tsify-next = { version = "0.5.5", features = ["js"] } # Automatic typescript types
+# Decoding of common image formats
+image = "0.25"
+# Averaging colors for the visualization
+palette = "0.7"
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
-wasm-bindgen = "0.2.100"
-serde-wasm-bindgen = "0.6.5"
-serde = { version = "1.0.219", features = ["derive"] }
-tsify-next = { version = "0.5.5", features = ["js"] }
-image = "0.25.6"
-base64 = "0.22.1"
-serde_json = "1.0.140"
-rand_chacha = { version = "0.9.0", features = ["serde"] }
-palette = "0.7.6"
-priority-queue = { version = "2.3.1", features = ["serde"] }
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

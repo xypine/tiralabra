@@ -19,12 +19,6 @@ pub struct BacktrackerByGradualReset<TPosition: Location> {
     reset_count: HashMap<TPosition, NonZeroUsize>,
 }
 
-impl<TPosition: Location> Default for BacktrackerByGradualReset<TPosition> {
-    fn default() -> Self {
-        Self::new(1)
-    }
-}
-
 impl<TPosition: Location> BacktrackerByGradualReset<TPosition> {
     pub fn new(starting_radius: usize) -> Self {
         Self {
@@ -198,6 +192,9 @@ mod tests {
         b.contradiction_handler(&mut grid, target)
             .expect("contradiction should've resolved");
 
+        let backtracker_values_sum: usize = b.reset_count.values().cloned().map(usize::from).sum();
+        assert_eq!(backtracker_values_sum, 2);
+
         for y in 0..2 {
             for x in 0..2 {
                 let location = Location2D { x, y };
@@ -218,6 +215,26 @@ mod tests {
         let mut grid = gen_grid(target);
         b.contradiction_handler(&mut grid, target)
             .expect("contradiction should've resolved");
+
+        let backtracker_values_sum: usize = b.reset_count.values().cloned().map(usize::from).sum();
+        assert_eq!(backtracker_values_sum, 4);
+
+        for y in 0..2 {
+            for x in 0..2 {
+                let location = Location2D { x, y };
+                let tile = grid.get_tile(location).unwrap();
+                assert_eq!(tile.possible_states().collect::<Vec<_>>(), vec![0, 1]);
+            }
+        }
+
+        // thrice, the contradicting tile, it's neighbours and their neighbours should be reset
+        // (all, in this case)
+        let mut grid = gen_grid(target);
+        b.contradiction_handler(&mut grid, target)
+            .expect("contradiction should've resolved");
+
+        let backtracker_values_sum: usize = b.reset_count.values().cloned().map(usize::from).sum();
+        assert_eq!(backtracker_values_sum, 6);
 
         for y in 0..2 {
             for x in 0..2 {

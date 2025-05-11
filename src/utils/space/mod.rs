@@ -5,7 +5,9 @@ use std::hash::Hash;
 
 pub mod s1d;
 pub mod s2d;
-pub mod s3d;
+
+// not used
+//pub mod s3d;
 
 /// Dimension-agnostic Location
 pub trait Location: Debug + Hash + Eq + Copy + Ord {

@@ -11,8 +11,11 @@ use crate::{
 };
 
 pub mod constant_2d;
-pub mod dynamic_1d;
 pub mod dynamic_2d;
+// 1d version of the grid is not a part of the core algorithm
+// as such, it won't be unit tested
+#[cfg(not(tarpaulin_include))]
+pub mod dynamic_1d;
 
 #[cfg(test)]
 pub mod tests;

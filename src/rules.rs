@@ -86,12 +86,13 @@ impl<const NEIGHBOURS: usize, TDirection: Direction<NEIGHBOURS> + Hash + Eq + Co
         checked_possible
     }
 
-    /// Returns a 32bit color
-    pub fn visualize_tile(&self, state: TileState) -> Option<u32> {
+    /// Returns some 32bit representation of a tile state, most commonly a color
+    pub fn represent_tile(&self, state: TileState) -> Option<u32> {
         self.state_representations.get(&state).cloned()
     }
 }
 
+#[cfg(not(tarpaulin_include))] // no need to track test coverage of sample data
 pub mod samples {
     use super::*;
 

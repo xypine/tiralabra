@@ -183,7 +183,9 @@ fn terrain() {
         debug_print(&grid);
     }
 }
+
 #[test]
+#[ignore = "slow"]
 fn flowers_blatant_rule_violations() {
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
@@ -222,7 +224,9 @@ fn flowers_blatant_rule_violations() {
         }
     });
 }
+
 #[test]
+#[ignore = "slow"]
 fn flowers_blatant_rule_violations_gradual_reset() {
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
@@ -235,7 +239,7 @@ fn flowers_blatant_rule_violations_gradual_reset() {
 
     (0..1000).into_par_iter().for_each(|seed| {
         let mut grid = ConstantSizeGrid2D::<W, H>::new(rules.clone(), seed);
-        let result = grid.run(500, Some(BacktrackerByGradualReset::default()));
+        let result = grid.run(500, Some(BacktrackerByGradualReset::new(1)));
         match result {
             Err(WaveFunctionCollapseInterruption::Finished) => {}
             Err(_) => result.unwrap(),

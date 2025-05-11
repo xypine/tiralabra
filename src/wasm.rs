@@ -93,7 +93,7 @@ impl Rules {
         self.0
             .possible
             .iter()
-            .map(|state| (state, self.0.visualize_tile(*state)))
+            .map(|state| (state, self.0.represent_tile(*state)))
             .map(|(state, color)| {
                 let v = color.map(|color| {
                     let a = ((color >> 24) & 0xFF) as u8;
@@ -278,7 +278,7 @@ pub fn new_backtracker(variant: BacktrackerVariant) -> Backtracker2D {
     match variant {
         BacktrackerVariant::Reset => Backtracker2D::Reset(BacktrackerByReset {}),
         BacktrackerVariant::GradualReset => {
-            Backtracker2D::GradualReset(BacktrackerByGradualReset::default())
+            Backtracker2D::GradualReset(BacktrackerByGradualReset::new(1))
         }
     }
 }

@@ -11,6 +11,7 @@ use aaltofunktionromautus::{
     },
 };
 
+#[cfg(not(tarpaulin_include))] // the utility binary doesn't need to be unit tested
 fn extract_rules_to_json(
     input_path: &str,
     output_path: &str,

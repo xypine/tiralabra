@@ -62,3 +62,62 @@ impl Ord for EntropyHeapEntry1D {
         self.entropy.cmp(&other.entropy)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_entropy_cmp_normal_values() {
+        let a = Entropy(1.0);
+        let b = Entropy(2.0);
+
+        // Note: entropy order is reversed — lower entropy is "greater"
+        assert_eq!(a.cmp(&b), std::cmp::Ordering::Greater);
+        assert_eq!(b.cmp(&a), std::cmp::Ordering::Less);
+        assert_eq!(a.cmp(&a), std::cmp::Ordering::Equal);
+    }
+
+    #[test]
+    fn test_entropy_cmp_with_nan() {
+        let a = Entropy(1.0);
+        let nan = Entropy(f64::NAN);
+
+        assert_eq!(nan.cmp(&a), std::cmp::Ordering::Greater);
+        assert_eq!(a.cmp(&nan), std::cmp::Ordering::Greater);
+    }
+
+    #[test]
+    fn test_entropy_heap_entry_cmp() {
+        let a = EntropyHeapEntry {
+            location: Location2D { x: 0, y: 0 },
+            entropy: Entropy(1.0),
+            version: 1,
+        };
+        let b = EntropyHeapEntry {
+            location: Location2D { x: 1, y: 1 },
+            entropy: Entropy(2.0),
+            version: 2,
+        };
+
+        assert_eq!(a.cmp(&b), std::cmp::Ordering::Greater);
+        assert_eq!(b.cmp(&a), std::cmp::Ordering::Less);
+    }
+
+    #[test]
+    fn test_entropy_heap_entry1d_cmp() {
+        let a = EntropyHeapEntry1D {
+            location: Location1D { x: 0 },
+            entropy: Entropy(1.0),
+            version: 1,
+        };
+        let b = EntropyHeapEntry1D {
+            location: Location1D { x: 1 },
+            entropy: Entropy(2.0),
+            version: 2,
+        };
+
+        assert_eq!(a.cmp(&b), std::cmp::Ordering::Greater);
+        assert_eq!(b.cmp(&a), std::cmp::Ordering::Less);
+    }
+}
