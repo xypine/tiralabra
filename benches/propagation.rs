@@ -1,6 +1,6 @@
 use aaltofunktionromautus::{
     grid::{constant_2d::ConstantSizeGrid2D, dynamic_2d::DynamicSizeGrid2D},
-    utils::space::Location2D,
+    utils::space::s2d::Location2D,
     wave_function_collapse::interface::WaveFunctionCollapse,
 };
 use criterion::{Criterion, black_box};
@@ -10,7 +10,7 @@ fn propagate_checkers(size: usize) {
     use aaltofunktionromautus::rules::samples::checkers::STATE_BLACK;
     let rules = aaltofunktionromautus::rules::samples::checkers::rules();
 
-    let mut grid = DynamicSizeGrid2D::new(size, size, rules);
+    let mut grid = DynamicSizeGrid2D::new(size, size, rules, black_box(0));
     let _ = grid.collapse(
         black_box(Location2D { x: 0, y: 0 }),
         black_box(Some(STATE_BLACK)),
